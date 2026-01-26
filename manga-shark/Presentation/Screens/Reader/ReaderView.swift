@@ -49,6 +49,9 @@ struct ReaderView: View {
                 await viewModel.saveProgress()
             }
         }
+        .sheet(isPresented: $viewModel.showSettings) {
+            readerSettingsSheet
+        }
     }
 
     @ViewBuilder
@@ -161,6 +164,46 @@ struct ReaderView: View {
         withAnimation(.easeInOut(duration: 0.2)) {
             showControls.toggle()
         }
+    }
+
+    private var readerSettingsSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Reader Mode") {
+                    Picker("Mode", selection: Binding(
+                        get: { viewModel.readerMode },
+                        set: { viewModel.setReaderMode($0) }
+                    )) {
+                        ForEach(ReaderMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Reading Direction") {
+                    Picker("Direction", selection: Binding(
+                        get: { viewModel.readingDirection },
+                        set: { viewModel.setReadingDirection($0) }
+                    )) {
+                        ForEach(ReadingDirection.allCases, id: \.self) { direction in
+                            Text(direction.displayName).tag(direction)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+            .navigationTitle("Reader Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        viewModel.showSettings = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 
