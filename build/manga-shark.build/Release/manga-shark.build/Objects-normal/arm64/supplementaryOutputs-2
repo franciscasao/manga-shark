@@ -1,0 +1,12 @@
+{
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Core/DI/AppState.swift" : {
+    "abi-baseline-json" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_shark.abi.json",
+    "const-values" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.swiftconstvalues",
+    "dependencies" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.d",
+    "diagnostics" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.dia",
+    "objc-header" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_shark-Swift.h",
+    "swiftdoc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_shark.swiftdoc",
+    "swiftmodule" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_shark.swiftmodule",
+    "swiftsourceinfo" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_shark.swiftsourceinfo"
+  }
+}

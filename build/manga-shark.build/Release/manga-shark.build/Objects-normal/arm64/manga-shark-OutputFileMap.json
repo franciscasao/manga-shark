@@ -1,0 +1,196 @@
+{
+  "" : {
+    "const-values" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.swiftconstvalues",
+    "dependencies" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.d",
+    "diagnostics" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.dia",
+    "emit-module-dependencies" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary-emit-module.dia",
+    "pch" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga-shark-primary.swiftdeps"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Core/DI/AppState.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/AppState.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/AppState.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/AppState.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Core/Extensions/Date+Extensions.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Date+Extensions.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Date+Extensions.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Date+Extensions.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Core/Extensions/String+Extensions.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/String+Extensions.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/String+Extensions.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/String+Extensions.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Core/Utilities/Formatters.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Formatters.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Formatters.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Formatters.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Local/Database/CoreDataStack.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/CoreDataStack.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/CoreDataStack.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/CoreDataStack.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Local/Preferences/KeychainHelper.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/KeychainHelper.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/KeychainHelper.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/KeychainHelper.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Local/Preferences/UserDefaultsKeys.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/UserDefaultsKeys.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/UserDefaultsKeys.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/UserDefaultsKeys.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Local/Storage/ImageCache.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ImageCache.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ImageCache.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ImageCache.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Mappers/DomainMappers.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DomainMappers.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DomainMappers.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DomainMappers.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Network/Auth/AuthManager.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/AuthManager.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/AuthManager.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/AuthManager.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Network/GraphQL/GraphQLQueries.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GraphQLQueries.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GraphQLQueries.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GraphQLQueries.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Network/GraphQL/GraphQLResponses.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GraphQLResponses.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GraphQLResponses.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GraphQLResponses.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Network/GraphQL/NetworkClient.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/NetworkClient.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/NetworkClient.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/NetworkClient.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Repositories/ChapterRepository.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ChapterRepository.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ChapterRepository.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ChapterRepository.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Repositories/DownloadManager.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DownloadManager.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DownloadManager.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DownloadManager.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Repositories/LibraryRepository.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/LibraryRepository.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/LibraryRepository.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/LibraryRepository.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Repositories/MangaRepository.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaRepository.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaRepository.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaRepository.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Data/Repositories/SourceRepository.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourceRepository.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourceRepository.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourceRepository.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Domain/Models/Category.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Category.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Category.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Category.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Domain/Models/Chapter.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Chapter.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Chapter.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Chapter.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Domain/Models/Manga.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Manga.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Manga.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Manga.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Domain/Models/Page.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Page.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Page.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Page.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Domain/Models/ServerConfig.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ServerConfig.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ServerConfig.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ServerConfig.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Domain/Models/Source.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Source.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Source.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/Source.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Common/Components/MangaGridItem.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaGridItem.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaGridItem.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaGridItem.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/Downloads/DownloadsView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DownloadsView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DownloadsView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/DownloadsView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/GlobalSearch/GlobalSearchView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GlobalSearchView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GlobalSearchView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/GlobalSearchView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/Library/LibraryView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/LibraryView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/LibraryView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/LibraryView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/MainTab/MainTabView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MainTabView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MainTabView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MainTabView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/MangaDetail/MangaDetailView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaDetailView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaDetailView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/MangaDetailView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/Reader/ReaderView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ReaderView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ReaderView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ReaderView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/ServerSetup/ServerSetupView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ServerSetupView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ServerSetupView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/ServerSetupView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/Settings/SettingsView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SettingsView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/Sources/SourceBrowseView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourceBrowseView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourceBrowseView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourceBrowseView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/Presentation/Screens/Sources/SourcesListView.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourcesListView.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourcesListView.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/SourcesListView.o"
+  },
+  "/Users/franciscasao/Developer/ios-reader/manga-shark/manga-shark/manga_sharkApp.swift" : {
+    "index-unit-output-path" : "/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_sharkApp.o",
+    "llvm-bc" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_sharkApp.bc",
+    "object" : "/Users/franciscasao/Developer/ios-reader/manga-shark/build/manga-shark.build/Release/manga-shark.build/Objects-normal/arm64/manga_sharkApp.o"
+  }
+}
