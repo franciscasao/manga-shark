@@ -62,10 +62,10 @@ struct MangaNode: Decodable {
     let genre: [String]?
     let status: String?
     let inLibrary: Bool?
-    let inLibraryAt: Int64?
+    let inLibraryAt: String?
     let realUrl: String?
-    let lastFetchedAt: Int64?
-    let chaptersLastFetchedAt: Int64?
+    let lastFetchedAt: String?
+    let chaptersLastFetchedAt: String?
     let updateStrategy: String?
     let freshData: Bool?
     let unreadCount: Int?
@@ -84,7 +84,8 @@ struct MangaResponse: Decodable {
 // MARK: - Chapters
 
 struct ChaptersConnection: Decodable {
-    let nodes: [ChapterNode]
+    let nodes: [ChapterNode]?
+    let totalCount: Int?
 }
 
 struct ChapterNode: Decodable {
@@ -95,14 +96,14 @@ struct ChapterNode: Decodable {
     let scanlator: String?
     let chapterNumber: Double
     let sourceOrder: Int
-    let uploadDate: Int64?
+    let uploadDate: String?
     let isRead: Bool
     let isBookmarked: Bool
     let isDownloaded: Bool
     let lastPageRead: Int
     let pageCount: Int
     let realUrl: String?
-    let fetchedAt: Int64?
+    let fetchedAt: String?
 }
 
 struct FetchChaptersResponse: Decodable {
@@ -116,7 +117,6 @@ struct FetchChaptersResult: Decodable {
 // MARK: - Chapter Pages
 
 struct ChapterPagesResponse: Decodable {
-    let chapter: ChapterNode
     let fetchChapterPages: FetchPagesResult
 }
 

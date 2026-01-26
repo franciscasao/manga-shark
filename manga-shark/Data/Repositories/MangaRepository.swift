@@ -44,7 +44,7 @@ actor MangaRepository {
             throw RepositoryError.noData
         }
 
-        return data.manga.chapters?.nodes.map { $0.toDomain() } ?? []
+        return data.manga.chapters?.nodes?.map { $0.toDomain() } ?? []
     }
 
     func fetchChapters(mangaId: Int) async throws -> [Chapter] {

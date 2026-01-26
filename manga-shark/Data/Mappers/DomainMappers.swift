@@ -33,15 +33,15 @@ extension MangaNode {
             genre: genre ?? [],
             status: MangaStatus(rawValue: status ?? "") ?? .unknown,
             inLibrary: inLibrary ?? false,
-            inLibraryAt: inLibraryAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
+            inLibraryAt: inLibraryAt.flatMap { Int64($0) }.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
             realUrl: realUrl,
-            lastFetchedAt: lastFetchedAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
-            chaptersLastFetchedAt: chaptersLastFetchedAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
+            lastFetchedAt: lastFetchedAt.flatMap { Int64($0) }.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
+            chaptersLastFetchedAt: chaptersLastFetchedAt.flatMap { Int64($0) }.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
             updateStrategy: UpdateStrategy(rawValue: updateStrategy ?? "") ?? .alwaysUpdate,
             freshData: freshData ?? false,
             unreadCount: unreadCount ?? 0,
             downloadCount: downloadCount ?? 0,
-            chapterCount: chapterCount ?? 0,
+            chapterCount: chapters?.totalCount ?? 0,
             categories: categories?.nodes.map { $0.toDomain() } ?? []
         )
     }
@@ -59,14 +59,14 @@ extension ChapterNode {
             scanlator: scanlator,
             chapterNumber: chapterNumber,
             sourceOrder: sourceOrder,
-            uploadDate: uploadDate.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
+            uploadDate: uploadDate.flatMap { Int64($0) }.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
             isRead: isRead,
             isBookmarked: isBookmarked,
             isDownloaded: isDownloaded,
             lastPageRead: lastPageRead,
             pageCount: pageCount,
             realUrl: realUrl,
-            fetchedAt: fetchedAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) }
+            fetchedAt: fetchedAt.flatMap { Int64($0) }.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) }
         )
     }
 }

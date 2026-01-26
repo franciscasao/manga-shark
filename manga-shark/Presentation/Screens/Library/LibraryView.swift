@@ -49,6 +49,18 @@ struct LibraryView: View {
             .task {
                 await viewModel.loadLibrary()
             }
+            .alert("Error Loading Library", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.errorMessage = nil
+                }
+                Button("Retry") {
+                    Task {
+                        await viewModel.loadLibrary(forceRefresh: true)
+                    }
+                }
+            } message: {
+                Text(viewModel.errorMessage ?? "An unknown error occurred")
+            }
         }
     }
 
@@ -109,18 +121,35 @@ final class LibraryViewModel: ObservableObject {
     }
 
     func loadLibrary(forceRefresh: Bool = false) async {
+        print("🎬 [LibraryViewModel] Starting library load")
         isLoading = true
         errorMessage = nil
 
         do {
+            print("🎬 [LibraryViewModel] Fetching library...")
             library = try await LibraryRepository.shared.getLibrary(forceRefresh: forceRefresh)
+            print("✅ [LibraryViewModel] Library loaded successfully: \(library.count) items")
+
+            print("🎬 [LibraryViewModel] Fetching categories...")
             categories = try await LibraryRepository.shared.getCategories(forceRefresh: forceRefresh)
+            print("✅ [LibraryViewModel] Categories loaded successfully: \(categories.count) items")
+
             sortLibrary()
+            print("✅ [LibraryViewModel] Library sorted")
         } catch {
+            print("❌ [LibraryViewModel] Error loading library: \(error)")
+            print("❌ [LibraryViewModel] Error type: \(type(of: error))")
+            print("❌ [LibraryViewModel] Error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("❌ [LibraryViewModel] NSError domain: \(nsError.domain)")
+                print("❌ [LibraryViewModel] NSError code: \(nsError.code)")
+                print("❌ [LibraryViewModel] NSError userInfo: \(nsError.userInfo)")
+            }
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
+        print("🎬 [LibraryViewModel] Library load completed (hasError: \(errorMessage != nil))")
     }
 
     func filteredLibrary(searchText: String) -> [Manga] {

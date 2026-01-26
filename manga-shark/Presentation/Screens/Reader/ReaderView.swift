@@ -34,7 +34,7 @@ struct ReaderView: View {
                     readerContent(geometry: geometry)
                 }
 
-                if showControls {
+                if showControls && !viewModel.pages.isEmpty {
                     controlsOverlay
                 }
             }
@@ -122,7 +122,7 @@ struct ReaderView: View {
                     get: { Double(viewModel.currentPageIndex) },
                     set: { viewModel.currentPageIndex = Int($0) }
                 ),
-                in: 0...Double(max(0, viewModel.pages.count - 1)),
+                in: 0...Double(viewModel.pages.count > 0 ? viewModel.pages.count - 1 : 0),
                 step: 1
             )
             .tint(.white)

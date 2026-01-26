@@ -84,11 +84,10 @@ enum GraphQLQueries {
             lastFetchedAt
             chaptersLastFetchedAt
             updateStrategy
-            freshData
             unreadCount
             downloadCount
-            chapterCount
             chapters {
+                totalCount
                 nodes {
                     id
                     mangaId
@@ -159,7 +158,9 @@ enum GraphQLQueries {
                 inLibrary
                 unreadCount
                 downloadCount
-                chapterCount
+                chapters {
+                    totalCount
+                }
                 categories {
                     nodes {
                         id
@@ -233,14 +234,7 @@ enum GraphQLQueries {
     // MARK: - Chapters
 
     static let getChapterPages = """
-    query GetChapterPages($chapterId: Int!) {
-        chapter(id: $chapterId) {
-            id
-            mangaId
-            pageCount
-            name
-            chapterNumber
-        }
+    mutation GetChapterPages($chapterId: Int!) {
         fetchChapterPages(input: { chapterId: $chapterId }) {
             pages
         }
