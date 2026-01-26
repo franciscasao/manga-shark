@@ -11,6 +11,11 @@ actor CoreDataStack {
         let model = Self.createManagedObjectModel()
         container = NSPersistentContainer(name: "MangaReader", managedObjectModel: model)
 
+        // Enable lightweight migration for schema changes
+        let description = container.persistentStoreDescriptions.first
+        description?.shouldMigrateStoreAutomatically = true
+        description?.shouldInferMappingModelAutomatically = true
+
         container.loadPersistentStores { description, error in
             if let error = error {
                 fatalError("Failed to load Core Data stack: \(error)")
@@ -156,10 +161,33 @@ actor CoreDataStack {
         chapterSourceOrderAttr.name = "sourceOrder"
         chapterSourceOrderAttr.attributeType = .integer32AttributeType
 
+        // Per-device progress tracking fields
+        let chapterDeviceIdAttr = NSAttributeDescription()
+        chapterDeviceIdAttr.name = "deviceId"
+        chapterDeviceIdAttr.attributeType = .stringAttributeType
+        chapterDeviceIdAttr.isOptional = true
+
+        let chapterServerIsReadAttr = NSAttributeDescription()
+        chapterServerIsReadAttr.name = "serverIsRead"
+        chapterServerIsReadAttr.attributeType = .booleanAttributeType
+        chapterServerIsReadAttr.defaultValue = false
+
+        let chapterServerLastPageReadAttr = NSAttributeDescription()
+        chapterServerLastPageReadAttr.name = "serverLastPageRead"
+        chapterServerLastPageReadAttr.attributeType = .integer32AttributeType
+        chapterServerLastPageReadAttr.defaultValue = 0
+
+        let chapterLastReadAtAttr = NSAttributeDescription()
+        chapterLastReadAtAttr.name = "lastReadAt"
+        chapterLastReadAtAttr.attributeType = .dateAttributeType
+        chapterLastReadAtAttr.isOptional = true
+
         chapterEntity.properties = [
             chapterIdAttr, chapterMangaIdAttr, chapterNameAttr, chapterUrlAttr,
             chapterNumberAttr, chapterIsReadAttr, chapterIsDownloadedAttr,
-            chapterLastPageReadAttr, chapterPageCountAttr, chapterSourceOrderAttr
+            chapterLastPageReadAttr, chapterPageCountAttr, chapterSourceOrderAttr,
+            chapterDeviceIdAttr, chapterServerIsReadAttr, chapterServerLastPageReadAttr,
+            chapterLastReadAtAttr
         ]
 
         // CachedImage Entity
@@ -185,6 +213,107 @@ actor CoreDataStack {
         model.entities = [mangaEntity, chapterEntity, imageEntity]
 
         return model
+    }
+
+    // MARK: - Per-Device Progress Tracking
+
+    func updateChapterProgress(chapterId: Int, deviceId: String, lastPageRead: Int, isRead: Bool) async throws {
+        try await performBackgroundTask { context in
+            let fetchRequest: NSFetchRequest<CachedChapter> = NSFetchRequest(entityName: "CachedChapter")
+            fetchRequest.predicate = NSPredicate(format: "id == %d AND deviceId == %@", Int32(chapterId), deviceId)
+
+            let results = try context.fetch(fetchRequest)
+            let chapter: CachedChapter
+
+            if let existingChapter = results.first {
+                chapter = existingChapter
+            } else {
+                chapter = NSEntityDescription.insertNewObject(forEntityName: "CachedChapter", into: context) as! CachedChapter
+                chapter.id = Int32(chapterId)
+                chapter.deviceId = deviceId
+            }
+
+            chapter.lastPageRead = Int32(lastPageRead)
+            chapter.isRead = isRead
+            chapter.lastReadAt = Date()
+
+            try context.save()
+        }
+    }
+
+    func getChapterProgress(chapterId: Int, deviceId: String) async throws -> (lastPageRead: Int, isRead: Bool)? {
+        try await performBackgroundTask { context in
+            let fetchRequest: NSFetchRequest<CachedChapter> = NSFetchRequest(entityName: "CachedChapter")
+            fetchRequest.predicate = NSPredicate(format: "id == %d AND deviceId == %@", Int32(chapterId), deviceId)
+
+            guard let chapter = try context.fetch(fetchRequest).first else {
+                return nil
+            }
+
+            return (Int(chapter.lastPageRead), chapter.isRead)
+        }
+    }
+
+    /// Get device-specific read status for multiple chapters
+    /// Returns a dictionary mapping chapter ID to read status
+    func getChaptersReadStatus(chapterIds: [Int], deviceId: String) async throws -> [Int: Bool] {
+        try await performBackgroundTask { context in
+            let fetchRequest: NSFetchRequest<CachedChapter> = NSFetchRequest(entityName: "CachedChapter")
+            fetchRequest.predicate = NSPredicate(format: "id IN %@ AND deviceId == %@", chapterIds.map { Int32($0) }, deviceId)
+
+            let chapters = try context.fetch(fetchRequest)
+            var readStatus: [Int: Bool] = [:]
+
+            for chapter in chapters {
+                readStatus[Int(chapter.id)] = chapter.isRead
+            }
+
+            return readStatus
+        }
+    }
+
+    /// Calculate device-specific unread count for a manga
+    /// Takes chapters from server and checks device-specific progress
+    func getDeviceUnreadCount(chapters: [Chapter], deviceId: String) async throws -> Int {
+        let chapterIds = chapters.map { $0.id }
+        let deviceReadStatus = try await getChaptersReadStatus(chapterIds: chapterIds, deviceId: deviceId)
+
+        var unreadCount = 0
+        for chapter in chapters {
+            // If we have device-specific progress, use that; otherwise use server status
+            let isRead = deviceReadStatus[chapter.id] ?? chapter.isRead
+            if !isRead {
+                unreadCount += 1
+            }
+        }
+
+        return unreadCount
+    }
+
+    /// Update device-specific read status for multiple chapters
+    func updateChaptersReadStatus(chapterIds: [Int], deviceId: String, isRead: Bool) async throws {
+        try await performBackgroundTask { context in
+            for chapterId in chapterIds {
+                let fetchRequest: NSFetchRequest<CachedChapter> = NSFetchRequest(entityName: "CachedChapter")
+                fetchRequest.predicate = NSPredicate(format: "id == %d AND deviceId == %@", Int32(chapterId), deviceId)
+
+                let results = try context.fetch(fetchRequest)
+                let chapter: CachedChapter
+
+                if let existingChapter = results.first {
+                    chapter = existingChapter
+                } else {
+                    chapter = NSEntityDescription.insertNewObject(forEntityName: "CachedChapter", into: context) as! CachedChapter
+                    chapter.id = Int32(chapterId)
+                    chapter.deviceId = deviceId
+                }
+
+                chapter.isRead = isRead
+                chapter.lastReadAt = Date()
+            }
+
+            try context.save()
+        }
     }
 }
 
@@ -260,6 +389,12 @@ public class CachedChapter: NSManagedObject {
     @NSManaged public var pageCount: Int32
     @NSManaged public var sourceOrder: Int32
 
+    // Per-device progress tracking
+    @NSManaged public var deviceId: String?
+    @NSManaged public var serverIsRead: Bool
+    @NSManaged public var serverLastPageRead: Int32
+    @NSManaged public var lastReadAt: Date?
+
     func toDomain() -> Chapter {
         Chapter(
             id: Int(id),
@@ -281,6 +416,8 @@ public class CachedChapter: NSManagedObject {
         self.name = chapter.name
         self.url = chapter.url
         self.chapterNumber = chapter.chapterNumber
+        self.serverIsRead = chapter.isRead
+        self.serverLastPageRead = Int32(chapter.lastPageRead)
         self.isRead = chapter.isRead
         self.isDownloaded = chapter.isDownloaded
         self.lastPageRead = Int32(chapter.lastPageRead)

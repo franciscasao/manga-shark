@@ -2,6 +2,17 @@ import SwiftUI
 
 struct MangaGridItem: View {
     let manga: Manga
+    let deviceUnreadCount: Int?
+
+    init(manga: Manga, deviceUnreadCount: Int? = nil) {
+        self.manga = manga
+        self.deviceUnreadCount = deviceUnreadCount
+    }
+
+    private var displayUnreadCount: Int {
+        // Use device-specific unread count if available, otherwise use server count
+        deviceUnreadCount ?? manga.unreadCount
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -11,8 +22,8 @@ struct MangaGridItem: View {
                     .clipped()
                     .cornerRadius(8)
 
-                if manga.unreadCount > 0 {
-                    Text("\(manga.unreadCount)")
+                if displayUnreadCount > 0 {
+                    Text("\(displayUnreadCount)")
                         .font(.caption2)
                         .fontWeight(.bold)
                         .padding(.horizontal, 6)

@@ -106,6 +106,18 @@ struct ChapterNode: Decodable {
     let fetchedAt: String?
 }
 
+// Minimal types for update mutations that return partial chapter data
+struct MinimalChapterNode: Decodable {
+    let id: Int
+    let lastPageRead: Int
+    let isRead: Bool
+}
+
+struct MinimalChapterNodeReadOnly: Decodable {
+    let id: Int
+    let isRead: Bool
+}
+
 struct FetchChaptersResponse: Decodable {
     let fetchChapters: FetchChaptersResult
 }
@@ -223,7 +235,7 @@ struct UpdateChapterResponse: Decodable {
 }
 
 struct UpdateChapterResult: Decodable {
-    let chapter: ChapterNode
+    let chapter: MinimalChapterNode
 }
 
 struct UpdateChaptersResponse: Decodable {
@@ -231,5 +243,5 @@ struct UpdateChaptersResponse: Decodable {
 }
 
 struct UpdateChaptersResult: Decodable {
-    let chapters: [ChapterNode]
+    let chapters: [MinimalChapterNodeReadOnly]
 }

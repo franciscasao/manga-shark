@@ -12,6 +12,7 @@ struct SettingsView: View {
                 serverSection
                 readerSection
                 librarySection
+                deviceSection
                 aboutSection
                 dangerZoneSection
             }
@@ -91,6 +92,22 @@ struct SettingsView: View {
             }
 
             Toggle("Show NSFW Sources", isOn: $viewModel.showNsfwSources)
+        }
+    }
+
+    private var deviceSection: some View {
+        Section {
+            HStack {
+                Text("Device ID")
+                Spacer()
+                Text(DeviceIdentifierManager.shared.deviceId.prefix(8) + "...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Device")
+        } footer: {
+            Text("Each device tracks reading progress independently. This ID uniquely identifies your device.")
         }
     }
 

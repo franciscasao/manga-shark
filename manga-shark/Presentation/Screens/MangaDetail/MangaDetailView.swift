@@ -154,10 +154,11 @@ struct MangaDetailView: View {
             if let firstUnread = viewModel.firstUnreadChapter {
                 NavigationLink(value: firstUnread) {
                     VStack(spacing: 4) {
-                        Image(systemName: "book")
+                        Image(systemName: "book.fill")
                             .font(.title2)
-                        Text(manga.unreadCount > 0 ? "Continue" : "Read")
+                        Text(viewModel.continueButtonText)
                             .font(.caption)
+                            .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -215,7 +216,10 @@ struct MangaDetailView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(viewModel.chapters) { chapter in
                         NavigationLink(value: chapter) {
-                            ChapterRowView(chapter: chapter)
+                            ChapterRowView(
+                                chapter: chapter,
+                                isRead: viewModel.deviceReadStatus[chapter.id] ?? chapter.isRead
+                            )
                         }
                         .buttonStyle(.plain)
 
@@ -268,13 +272,19 @@ struct StatusBadge: View {
 
 struct ChapterRowView: View {
     let chapter: Chapter
+    let isRead: Bool
+
+    init(chapter: Chapter, isRead: Bool? = nil) {
+        self.chapter = chapter
+        self.isRead = isRead ?? chapter.isRead
+    }
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(chapter.displayName)
                     .font(.body)
-                    .foregroundStyle(chapter.isRead ? .secondary : .primary)
+                    .foregroundStyle(isRead ? .secondary : .primary)
 
                 HStack(spacing: 8) {
                     if let scanlator = chapter.scanlator, !scanlator.isEmpty {
@@ -370,9 +380,37 @@ final class MangaDetailViewModel: ObservableObject {
     @Published var chapters: [Chapter] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var deviceReadStatus: [Int: Bool] = [:] // chapter ID -> device-specific read status
 
     var firstUnreadChapter: Chapter? {
-        chapters.last { !$0.isRead } ?? chapters.first
+        // Use device-specific read status if available, otherwise use server status
+        chapters.last { chapter in
+            let isRead = deviceReadStatus[chapter.id] ?? chapter.isRead
+            return !isRead
+        } ?? chapters.first
+    }
+
+    var hasStartedReading: Bool {
+        // Check if any chapter has been read on this device
+        for chapter in chapters {
+            let isRead = deviceReadStatus[chapter.id] ?? chapter.isRead
+            if isRead {
+                return true
+            }
+        }
+        return false
+    }
+
+    var continueButtonText: String {
+        guard let firstUnread = firstUnreadChapter else {
+            return "Start Reading"
+        }
+
+        if hasStartedReading {
+            return "Continue Ch. \(Int(firstUnread.chapterNumber))"
+        } else {
+            return "Start Reading"
+        }
     }
 
     init(mangaId: Int) {
@@ -387,11 +425,26 @@ final class MangaDetailViewModel: ObservableObject {
             manga = try await MangaRepository.shared.getManga(id: mangaId, forceRefresh: forceRefresh)
             chapters = try await MangaRepository.shared.getChapters(mangaId: mangaId)
             chapters.sort { $0.sourceOrder > $1.sourceOrder }
+
+            // Load device-specific read status
+            await loadDeviceReadStatus()
         } catch {
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
+    }
+
+    func loadDeviceReadStatus() async {
+        let deviceId = DeviceIdentifierManager.shared.deviceId
+        let chapterIds = chapters.map { $0.id }
+
+        do {
+            deviceReadStatus = try await CoreDataStack.shared.getChaptersReadStatus(chapterIds: chapterIds, deviceId: deviceId)
+        } catch {
+            // Failed to load device status, will fall back to server status
+            print("Failed to load device read status: \(error)")
+        }
     }
 
     func refreshChapters() async {
@@ -423,24 +476,18 @@ final class MangaDetailViewModel: ObservableObject {
         let chapterIds = chapters.filter { !$0.isRead }.map { $0.id }
         guard !chapterIds.isEmpty else { return }
 
-        do {
-            try await ChapterRepository.shared.markChaptersRead(chapterIds: chapterIds, isRead: true)
-            await loadManga(forceRefresh: true)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        // Repository handles both local save and server sync
+        await ChapterRepository.shared.markChaptersRead(chapterIds: chapterIds, isRead: true)
+        await loadManga(forceRefresh: true)
     }
 
     func markAllUnread() async {
         let chapterIds = chapters.filter { $0.isRead }.map { $0.id }
         guard !chapterIds.isEmpty else { return }
 
-        do {
-            try await ChapterRepository.shared.markChaptersRead(chapterIds: chapterIds, isRead: false)
-            await loadManga(forceRefresh: true)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        // Repository handles both local save and server sync
+        await ChapterRepository.shared.markChaptersRead(chapterIds: chapterIds, isRead: false)
+        await loadManga(forceRefresh: true)
     }
 }
 

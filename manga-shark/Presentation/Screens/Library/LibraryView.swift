@@ -77,7 +77,10 @@ struct LibraryView: View {
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.filteredLibrary(searchText: searchText)) { manga in
                     NavigationLink(value: manga) {
-                        MangaGridItem(manga: manga)
+                        MangaGridItem(
+                            manga: manga,
+                            deviceUnreadCount: viewModel.deviceUnreadCounts[manga.id]
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -96,6 +99,7 @@ final class LibraryViewModel: ObservableObject {
     @Published var categories: [Category] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var deviceUnreadCounts: [Int: Int] = [:] // manga ID -> device-specific unread count
 
     @Published var sortOrder: SortOrder = .title {
         didSet { sortLibrary() }
@@ -136,6 +140,11 @@ final class LibraryViewModel: ObservableObject {
 
             sortLibrary()
             print("✅ [LibraryViewModel] Library sorted")
+
+            // Calculate device-specific unread counts in the background
+            Task {
+                await calculateDeviceUnreadCounts()
+            }
         } catch {
             print("❌ [LibraryViewModel] Error loading library: \(error)")
             print("❌ [LibraryViewModel] Error type: \(type(of: error))")
@@ -150,6 +159,30 @@ final class LibraryViewModel: ObservableObject {
 
         isLoading = false
         print("🎬 [LibraryViewModel] Library load completed (hasError: \(errorMessage != nil))")
+    }
+
+    func calculateDeviceUnreadCounts() async {
+        let deviceId = DeviceIdentifierManager.shared.deviceId
+        print("📊 [LibraryViewModel] Calculating device-specific unread counts for \(library.count) manga")
+
+        for manga in library {
+            do {
+                // Fetch chapters for this manga
+                let chapters = try await MangaRepository.shared.getChapters(mangaId: manga.id)
+
+                // Calculate device-specific unread count
+                let unreadCount = try await CoreDataStack.shared.getDeviceUnreadCount(chapters: chapters, deviceId: deviceId)
+
+                // Update the dictionary
+                deviceUnreadCounts[manga.id] = unreadCount
+                print("✅ [LibraryViewModel] Manga '\(manga.title)' - Device unread: \(unreadCount), Server unread: \(manga.unreadCount)")
+            } catch {
+                print("❌ [LibraryViewModel] Failed to calculate unread count for manga \(manga.id): \(error)")
+                // Keep server unread count on error
+            }
+        }
+
+        print("✅ [LibraryViewModel] Device-specific unread counts calculated")
     }
 
     func filteredLibrary(searchText: String) -> [Manga] {
@@ -170,7 +203,10 @@ final class LibraryViewModel: ObservableObject {
             case .title:
                 result = a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
             case .unreadCount:
-                result = a.unreadCount < b.unreadCount
+                // Use device-specific unread count if available, otherwise use server count
+                let aUnread = deviceUnreadCounts[a.id] ?? a.unreadCount
+                let bUnread = deviceUnreadCounts[b.id] ?? b.unreadCount
+                result = aUnread < bUnread
             case .lastRead:
                 let aDate = a.lastReadChapter?.fetchedAt ?? .distantPast
                 let bDate = b.lastReadChapter?.fetchedAt ?? .distantPast

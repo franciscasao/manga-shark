@@ -11,6 +11,7 @@ enum UserDefaultsKeys {
     static let librarySortAscending = "library_sort_ascending"
     static let selectedCategoryId = "selected_category_id"
     static let showNsfwSources = "show_nsfw_sources"
+    static let deviceId = "device_id"
 }
 
 @propertyWrapper

@@ -41,6 +41,7 @@ struct ReaderView: View {
         }
         .navigationBarHidden(true)
         .statusBar(hidden: !showControls)
+        .toolbar(.hidden, for: .tabBar)
         .task {
             await viewModel.loadPages()
         }
@@ -383,7 +384,16 @@ final class ReaderViewModel: ObservableObject {
 
         do {
             pages = try await ChapterRepository.shared.getChapterPages(chapterId: currentChapter.id)
-            currentPageIndex = min(currentChapter.lastPageRead, max(0, pages.count - 1))
+
+            // Get device-specific progress from CoreData
+            let deviceId = DeviceIdentifierManager.shared.deviceId
+            if let progress = try? await CoreDataStack.shared.getChapterProgress(chapterId: currentChapter.id, deviceId: deviceId) {
+                // Use device-specific progress
+                currentPageIndex = min(progress.lastPageRead, max(0, pages.count - 1))
+            } else {
+                // Fallback to server progress (for chapters not yet read on this device)
+                currentPageIndex = min(currentChapter.lastPageRead, max(0, pages.count - 1))
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -396,15 +406,12 @@ final class ReaderViewModel: ObservableObject {
 
         let isRead = currentPageIndex >= pages.count - 1
 
-        do {
-            try await ChapterRepository.shared.updateProgress(
-                chapterId: currentChapter.id,
-                lastPageRead: currentPageIndex,
-                isRead: isRead
-            )
-        } catch {
-            // Silently fail for progress saving
-        }
+        // Local-first: saves immediately to CoreData, syncs to server in background
+        await ChapterRepository.shared.updateProgress(
+            chapterId: currentChapter.id,
+            lastPageRead: currentPageIndex,
+            isRead: isRead
+        )
     }
 
     func previousChapter() async {
