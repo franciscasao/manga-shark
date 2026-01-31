@@ -67,18 +67,34 @@ struct ReaderView: View {
             )
         case .webtoon:
             ManhwaReaderRepresentable(
-                pages: viewModel.pages,
-                chapterId: viewModel.currentChapter.id,
+                initialChapter: viewModel.currentChapter,
+                initialPages: viewModel.pages,
+                allChapters: chapters,
                 serverUrl: AuthManager.shared.serverConfig.serverUrl,
                 authHeader: AuthManager.shared.authorizationHeader,
                 initialScrollPercentage: viewModel.manhwaScrollPercentage
             )
             .onTapToToggleControls { toggleControls() }
-            .onProgressUpdate { percentage, offsetY, visibleIndex in
-                viewModel.updateManhwaProgress(scrollPercentage: percentage, offsetY: offsetY, visiblePageIndex: visibleIndex)
+            .onProgressUpdate { chapter, percentage, visibleIndex in
+                viewModel.updateManhwaProgress(chapter: chapter, scrollPercentage: percentage, visiblePageIndex: visibleIndex)
             }
-            .onReachEnd {
-                // Could trigger next chapter here if desired
+            .onChapterChange { oldChapter, newChapter, direction in
+                Task { @MainActor in
+                    await viewModel.handleChapterChange(from: oldChapter, to: newChapter, direction: direction)
+                }
+            }
+            .onNeedsNextChapter { afterChapter, completion in
+                Task {
+                    await viewModel.fetchNextChapter(after: afterChapter, completion: completion)
+                }
+            }
+            .onNeedsPreviousChapter { beforeChapter, completion in
+                Task {
+                    await viewModel.fetchPreviousChapter(before: beforeChapter, completion: completion)
+                }
+            }
+            .onReachLastChapter {
+                // Reached the last chapter
             }
             .ignoresSafeArea()
         }
@@ -425,25 +441,89 @@ final class ReaderViewModel: ObservableObject {
         isLoading = false
     }
 
-    func updateManhwaProgress(scrollPercentage: CGFloat, offsetY: CGFloat, visiblePageIndex: Int) {
+    func updateManhwaProgress(chapter: Chapter, scrollPercentage: CGFloat, visiblePageIndex: Int) {
+        // Update current chapter if changed
+        if chapter.id != currentChapter.id {
+            currentChapter = chapter
+        }
+
         manhwaScrollPercentage = Double(scrollPercentage)
         currentPageIndex = visiblePageIndex
-
-        // Calculate which page we're on based on scroll percentage for progress tracking
-        if !pages.isEmpty {
-            let estimatedPage = Int(scrollPercentage * CGFloat(pages.count - 1))
-            currentPageIndex = min(estimatedPage, pages.count - 1)
-        }
 
         // Update progress in SwiftData (throttled)
         let isRead = scrollPercentage >= 0.95
         ReadingProgressManager.shared.updateProgress(
-            chapterId: String(currentChapter.id),
-            seriesId: String(currentChapter.mangaId),
+            chapterId: String(chapter.id),
+            seriesId: String(chapter.mangaId),
             percentage: Double(scrollPercentage),
-            pageIndex: currentPageIndex,
+            pageIndex: visiblePageIndex,
             isRead: isRead
         )
+    }
+
+    func handleChapterChange(from oldChapter: Chapter, to newChapter: Chapter, direction: ScrollDirection) async {
+        // Mark previous chapter as complete when scrolling forward
+        // Uses immediate save (bypasses debounce) to ensure persistence before user navigates away
+        if direction == .forward {
+            await ReadingProgressManager.shared.markChapterComplete(
+                chapterId: String(oldChapter.id),
+                seriesId: String(oldChapter.mangaId)
+            )
+        }
+
+        // Update current chapter
+        currentChapter = newChapter
+
+        // Begin reading session for new chapter
+        ReadingProgressManager.shared.beginReading(chapterId: String(newChapter.id))
+    }
+
+    func fetchNextChapter(after chapter: Chapter, completion: @escaping ([Page]?, Chapter?) -> Void) async {
+        // Find next chapter (chapters are sorted newest first, so "next" is lower index)
+        guard let currentIndex = chapters.firstIndex(where: { $0.id == chapter.id }) else {
+            completion(nil, nil)
+            return
+        }
+
+        let nextIndex = currentIndex - 1
+        guard nextIndex >= 0 else {
+            completion(nil, nil)
+            return
+        }
+
+        let nextChapter = chapters[nextIndex]
+
+        do {
+            let pages = try await ChapterRepository.shared.getChapterPages(chapterId: nextChapter.id)
+            completion(pages, nextChapter)
+        } catch {
+            print("⚠️ [ReaderViewModel] Failed to fetch next chapter: \(error)")
+            completion(nil, nil)
+        }
+    }
+
+    func fetchPreviousChapter(before chapter: Chapter, completion: @escaping ([Page]?, Chapter?) -> Void) async {
+        // Find previous chapter (chapters are sorted newest first, so "previous" is higher index)
+        guard let currentIndex = chapters.firstIndex(where: { $0.id == chapter.id }) else {
+            completion(nil, nil)
+            return
+        }
+
+        let previousIndex = currentIndex + 1
+        guard previousIndex < chapters.count else {
+            completion(nil, nil)
+            return
+        }
+
+        let previousChapter = chapters[previousIndex]
+
+        do {
+            let pages = try await ChapterRepository.shared.getChapterPages(chapterId: previousChapter.id)
+            completion(pages, previousChapter)
+        } catch {
+            print("⚠️ [ReaderViewModel] Failed to fetch previous chapter: \(error)")
+            completion(nil, nil)
+        }
     }
 
     func saveProgress() async {

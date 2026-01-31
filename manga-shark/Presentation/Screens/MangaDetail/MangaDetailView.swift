@@ -65,6 +65,11 @@ struct MangaDetailView: View {
         .refreshable {
             await viewModel.loadManga(forceRefresh: true)
         }
+        .onAppear {
+            Task {
+                await viewModel.loadContinueChapterProgress()
+            }
+        }
         .navigationDestination(for: Chapter.self) { chapter in
             ReaderView(chapter: chapter, chapters: viewModel.chapters)
         }
@@ -159,6 +164,22 @@ struct MangaDetailView: View {
                         Text(viewModel.continueButtonText)
                             .font(.caption)
                             .fontWeight(.semibold)
+
+                        // Progress bar when there's progress
+                        if let progress = viewModel.continueChapterProgress,
+                           progress.lastReadPercentage > 0 && progress.lastReadPercentage < 1.0 {
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.white.opacity(0.3))
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.white)
+                                        .frame(width: geo.size.width * progress.lastReadPercentage)
+                                }
+                            }
+                            .frame(height: 3)
+                            .padding(.horizontal, 12)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -381,6 +402,7 @@ final class MangaDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var deviceReadStatus: [Int: Bool] = [:] // chapter ID -> device-specific read status
+    @Published var continueChapterProgress: ProgressData?
 
     var firstUnreadChapter: Chapter? {
         // Use device-specific read status if available, otherwise use server status
@@ -406,11 +428,31 @@ final class MangaDetailViewModel: ObservableObject {
             return "Start Reading"
         }
 
-        if hasStartedReading {
-            return "Continue Ch. \(Int(firstUnread.chapterNumber))"
-        } else {
-            return "Start Reading"
+        let chapterNum = Int(firstUnread.chapterNumber)
+
+        // Check for progress in this chapter
+        if let progress = continueChapterProgress {
+            let percentage = Int(progress.lastReadPercentage * 100)
+
+            if percentage > 0 && percentage < 100 {
+                return "Continue Ch. \(chapterNum) • \(percentage)%"
+            }
+
+            // Fallback: calculate from page index (iOS 16 or scroll mode)
+            if progress.lastPageIndex > 0, firstUnread.pageCount > 0 {
+                let pagePercent = Int(Double(progress.lastPageIndex) / Double(firstUnread.pageCount) * 100)
+                if pagePercent > 0 && pagePercent < 100 {
+                    return "Continue Ch. \(chapterNum) • \(pagePercent)%"
+                }
+            }
         }
+
+        // No in-progress data
+        if hasStartedReading {
+            return "Continue Ch. \(chapterNum)"
+        }
+
+        return "Start Reading"
     }
 
     init(mangaId: Int) {
@@ -428,6 +470,9 @@ final class MangaDetailViewModel: ObservableObject {
 
             // Load device-specific read status
             await loadDeviceReadStatus()
+
+            // Load progress for the continue button
+            await loadContinueChapterProgress()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -436,15 +481,28 @@ final class MangaDetailViewModel: ObservableObject {
     }
 
     func loadDeviceReadStatus() async {
-        let deviceId = DeviceIdentifierManager.shared.deviceId
         let chapterIds = chapters.map { $0.id }
 
-        do {
-            deviceReadStatus = try await CoreDataStack.shared.getChaptersReadStatus(chapterIds: chapterIds, deviceId: deviceId)
-        } catch {
-            // Failed to load device status, will fall back to server status
-            print("Failed to load device read status: \(error)")
+        // Use ReadingProgressManager which reads from correct source per iOS version
+        let progressReadStatus = await ReadingProgressManager.shared.getReadStatus(for: chapterIds)
+
+        // Merge with server status - device progress takes priority
+        for chapter in chapters {
+            if let deviceRead = progressReadStatus[chapter.id] {
+                deviceReadStatus[chapter.id] = deviceRead
+            }
         }
+    }
+
+    func loadContinueChapterProgress() async {
+        guard let chapter = firstUnreadChapter else {
+            continueChapterProgress = nil
+            return
+        }
+
+        continueChapterProgress = await ReadingProgressManager.shared.getProgress(
+            for: String(chapter.id)
+        )
     }
 
     func refreshChapters() async {

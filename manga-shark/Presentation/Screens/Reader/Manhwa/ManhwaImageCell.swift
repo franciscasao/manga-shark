@@ -2,8 +2,8 @@ import UIKit
 import Kingfisher
 
 protocol ManhwaImageCellDelegate: AnyObject {
-    func manhwaImageCell(_ cell: ManhwaImageCell, didLoadImageWithSize size: CGSize, atIndex index: Int)
-    func manhwaImageCellDidRequestRetry(_ cell: ManhwaImageCell, atIndex index: Int)
+    func manhwaImageCell(_ cell: ManhwaImageCell, didLoadImageWithSize size: CGSize, atIndex index: Int, inSection section: Int)
+    func manhwaImageCellDidRequestRetry(_ cell: ManhwaImageCell, atIndex index: Int, inSection section: Int)
 }
 
 final class ManhwaImageCell: UICollectionViewCell {
@@ -11,6 +11,8 @@ final class ManhwaImageCell: UICollectionViewCell {
 
     weak var delegate: ManhwaImageCellDelegate?
     private(set) var index: Int = 0
+    private(set) var sectionIndex: Int = 0
+    private(set) var isUnloadedPlaceholder: Bool = false
 
     private let imageView: UIImageView = {
         let iv = UIImageView()
@@ -84,11 +86,14 @@ final class ManhwaImageCell: UICollectionViewCell {
         loadedImageSize = nil
         loadingIndicator.stopAnimating()
         retryButton.isHidden = true
+        isUnloadedPlaceholder = false
     }
 
-    func configure(with url: URL?, index: Int, options: KingfisherOptionsInfo) {
+    func configure(with url: URL?, index: Int, section: Int, options: KingfisherOptionsInfo) {
         self.index = index
+        self.sectionIndex = section
         self.currentUrl = url
+        self.isUnloadedPlaceholder = false
 
         guard let url = url else {
             showError()
@@ -111,7 +116,7 @@ final class ManhwaImageCell: UICollectionViewCell {
                 self.retryButton.isHidden = true
                 let imageSize = imageResult.image.size
                 self.loadedImageSize = imageSize
-                self.delegate?.manhwaImageCell(self, didLoadImageWithSize: imageSize, atIndex: self.index)
+                self.delegate?.manhwaImageCell(self, didLoadImageWithSize: imageSize, atIndex: self.index, inSection: self.sectionIndex)
 
             case .failure(let error):
                 if case .requestError(reason: .emptyRequest) = error {
@@ -124,12 +129,24 @@ final class ManhwaImageCell: UICollectionViewCell {
         }
     }
 
+    /// Configure as placeholder for unloaded chapter (preserves height via cached size)
+    func configureAsPlaceholder(index: Int, section: Int) {
+        self.index = index
+        self.sectionIndex = section
+        self.currentUrl = nil
+        self.isUnloadedPlaceholder = true
+
+        imageView.image = nil
+        loadingIndicator.startAnimating()
+        retryButton.isHidden = true
+    }
+
     private func showError() {
         retryButton.isHidden = false
         loadingIndicator.stopAnimating()
     }
 
     @objc private func retryTapped() {
-        delegate?.manhwaImageCellDidRequestRetry(self, atIndex: index)
+        delegate?.manhwaImageCellDidRequestRetry(self, atIndex: index, inSection: sectionIndex)
     }
 }

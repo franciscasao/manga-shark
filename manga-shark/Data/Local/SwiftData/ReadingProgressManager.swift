@@ -57,6 +57,71 @@ final class ReadingProgressManageriOS17 {
         }
     }
 
+    func getReadStatus(for chapterIds: [String]) async -> [String: Bool] {
+        guard let container = modelContainer else { return [:] }
+
+        let context = ModelContext(container)
+        var readStatus: [String: Bool] = [:]
+
+        for chapterId in chapterIds {
+            let descriptor = FetchDescriptor<ChapterProgress>(
+                predicate: #Predicate { $0.chapterId == chapterId }
+            )
+
+            if let results = try? context.fetch(descriptor),
+               let progress = results.first {
+                readStatus[chapterId] = progress.isRead
+            }
+        }
+
+        return readStatus
+    }
+
+    func markChapterCompleteImmediate(
+        chapterId: String,
+        seriesId: String
+    ) async {
+        guard let container = modelContainer else { return }
+
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<ChapterProgress>(
+            predicate: #Predicate { $0.chapterId == chapterId }
+        )
+
+        do {
+            let results = try context.fetch(descriptor)
+            let now = Date()
+
+            if let existingProgress = results.first {
+                existingProgress.lastReadPercentage = 1.0
+                existingProgress.isRead = true
+                existingProgress.updatedAt = now
+            } else {
+                let newProgress = ChapterProgress(
+                    chapterId: chapterId,
+                    seriesId: seriesId,
+                    lastReadPercentage: 1.0,
+                    updatedAt: now,
+                    isRead: true,
+                    lastPageIndex: Int.max
+                )
+                context.insert(newProgress)
+            }
+
+            try context.save()
+            print("✅ [ReadingProgressManager] Chapter \(chapterId) marked complete immediately")
+        } catch {
+            print("⚠️ [ReadingProgressManager] Failed to mark chapter complete: \(error)")
+        }
+
+        // Server sync
+        await ReadingProgressManager.syncProgressToServer(
+            chapterId: chapterId,
+            lastPageRead: Int.max,
+            isRead: true
+        )
+    }
+
     func updateProgress(
         chapterId: String,
         seriesId: String,
@@ -164,6 +229,52 @@ final class ReadingProgressManager {
     func endReading() {
         if #available(iOS 17, *) {
             ReadingProgressManageriOS17.shared.endReading()
+        }
+    }
+
+    /// Quick method to mark a chapter as 100% complete during chapter transitions
+    /// This method bypasses debounce to ensure immediate persistence
+    func markChapterComplete(chapterId: String, seriesId: String) async {
+        if #available(iOS 17, *) {
+            await ReadingProgressManageriOS17.shared.markChapterCompleteImmediate(
+                chapterId: chapterId,
+                seriesId: seriesId
+            )
+        } else {
+            // iOS 16: Use CoreData directly (already synchronous per-call)
+            let deviceId = DeviceIdentifierManager.shared.deviceId
+            if let chapterIdInt = Int(chapterId) {
+                try? await CoreDataStack.shared.updateChapterProgress(
+                    chapterId: chapterIdInt,
+                    deviceId: deviceId,
+                    lastPageRead: Int.max,
+                    isRead: true
+                )
+            }
+            await Self.syncProgressToServer(chapterId: chapterId, lastPageRead: Int.max, isRead: true)
+        }
+    }
+
+    /// Get read status for multiple chapters from the correct data source per iOS version
+    func getReadStatus(for chapterIds: [Int]) async -> [Int: Bool] {
+        if #available(iOS 17, *) {
+            let stringIds = chapterIds.map { String($0) }
+            let result = await ReadingProgressManageriOS17.shared.getReadStatus(for: stringIds)
+            // Convert back to Int keys
+            var intResult: [Int: Bool] = [:]
+            for (key, value) in result {
+                if let intKey = Int(key) {
+                    intResult[intKey] = value
+                }
+            }
+            return intResult
+        } else {
+            // iOS 16: Use CoreData
+            let deviceId = DeviceIdentifierManager.shared.deviceId
+            return (try? await CoreDataStack.shared.getChaptersReadStatus(
+                chapterIds: chapterIds,
+                deviceId: deviceId
+            )) ?? [:]
         }
     }
 
