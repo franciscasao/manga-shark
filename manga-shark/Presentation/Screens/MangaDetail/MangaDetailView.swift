@@ -1,7 +1,57 @@
 import SwiftUI
+import SwiftData
 import Combine
 
+// MARK: - Main Entry Point (routes to iOS-specific implementation)
+
 struct MangaDetailView: View {
+    let mangaId: Int
+
+    var body: some View {
+        if #available(iOS 17, *) {
+            MangaDetailViewiOS17(mangaId: mangaId)
+        } else {
+            MangaDetailViewLegacy(mangaId: mangaId)
+        }
+    }
+}
+
+// MARK: - iOS 17+ Implementation with @Query
+
+@available(iOS 17, *)
+struct MangaDetailViewiOS17: View {
+    let mangaId: Int
+    @StateObject private var viewModel: MangaDetailViewModel
+    @State private var showingCategorySheet = false
+
+    // SwiftData query for reactive progress updates
+    @Query private var progressRecords: [ChapterProgress]
+
+    init(mangaId: Int) {
+        self.mangaId = mangaId
+        _viewModel = StateObject(wrappedValue: MangaDetailViewModel(mangaId: mangaId))
+
+        // Filter progress records by this manga's series ID
+        let seriesId = String(mangaId)
+        _progressRecords = Query(filter: #Predicate<ChapterProgress> { $0.seriesId == seriesId })
+    }
+
+    private func isChapterRead(_ chapterId: Int) -> Bool {
+        progressRecords.first { $0.chapterId == String(chapterId) }?.isRead ?? false
+    }
+
+    var body: some View {
+        MangaDetailContent(
+            viewModel: viewModel,
+            showingCategorySheet: $showingCategorySheet,
+            isChapterReadFromQuery: isChapterRead
+        )
+    }
+}
+
+// MARK: - iOS 16 Implementation (fallback without @Query)
+
+struct MangaDetailViewLegacy: View {
     let mangaId: Int
     @StateObject private var viewModel: MangaDetailViewModel
     @State private var showingCategorySheet = false
@@ -10,6 +60,22 @@ struct MangaDetailView: View {
         self.mangaId = mangaId
         _viewModel = StateObject(wrappedValue: MangaDetailViewModel(mangaId: mangaId))
     }
+
+    var body: some View {
+        MangaDetailContent(
+            viewModel: viewModel,
+            showingCategorySheet: $showingCategorySheet,
+            isChapterReadFromQuery: nil
+        )
+    }
+}
+
+// MARK: - Shared Content View
+
+struct MangaDetailContent: View {
+    @ObservedObject var viewModel: MangaDetailViewModel
+    @Binding var showingCategorySheet: Bool
+    let isChapterReadFromQuery: ((Int) -> Bool)?
 
     var body: some View {
         Group {
@@ -72,6 +138,11 @@ struct MangaDetailView: View {
         }
         .navigationDestination(for: Chapter.self) { chapter in
             ReaderView(chapter: chapter, chapters: viewModel.chapters)
+        }
+        .alert("Download", isPresented: $viewModel.showDownloadComingSoon) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Download feature coming soon!")
         }
     }
 
@@ -212,6 +283,18 @@ struct MangaDetailView: View {
 
                 Spacer()
 
+                Button {
+                    viewModel.toggleSort()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.chapterSortAscending ? "arrow.up" : "arrow.down")
+                        Text(viewModel.chapterSortAscending ? "Oldest" : "Newest")
+                            .font(.caption)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
                 Menu {
                     Button(action: {
                         Task { await viewModel.markAllRead() }
@@ -236,10 +319,16 @@ struct MangaDetailView: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(viewModel.chapters) { chapter in
+                        let queryRead = isChapterReadFromQuery?(chapter.id) ?? false
+                        let chapterIsRead = queryRead || (viewModel.deviceReadStatus[chapter.id] ?? chapter.isRead)
+
                         NavigationLink(value: chapter) {
                             ChapterRowView(
                                 chapter: chapter,
-                                isRead: viewModel.deviceReadStatus[chapter.id] ?? chapter.isRead
+                                isRead: chapterIsRead,
+                                onMarkRead: { viewModel.markChapterRead(chapterId: chapter.id) },
+                                onMarkUnread: { viewModel.markChapterUnread(chapterId: chapter.id) },
+                                onDownload: { viewModel.downloadChapter(chapterId: chapter.id) }
                             )
                         }
                         .buttonStyle(.plain)
@@ -294,18 +383,43 @@ struct StatusBadge: View {
 struct ChapterRowView: View {
     let chapter: Chapter
     let isRead: Bool
+    let onMarkRead: () -> Void
+    let onMarkUnread: () -> Void
+    let onDownload: () -> Void
 
-    init(chapter: Chapter, isRead: Bool? = nil) {
+    init(chapter: Chapter, isRead: Bool? = nil, onMarkRead: @escaping () -> Void = {}, onMarkUnread: @escaping () -> Void = {}, onDownload: @escaping () -> Void = {}) {
         self.chapter = chapter
         self.isRead = isRead ?? chapter.isRead
+        self.onMarkRead = onMarkRead
+        self.onMarkUnread = onMarkUnread
+        self.onDownload = onDownload
+    }
+
+    private var isNew: Bool {
+        guard !isRead, let uploadDate = chapter.uploadDate else { return false }
+        guard let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) else { return false }
+        return uploadDate > sevenDaysAgo
     }
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(chapter.displayName)
-                    .font(.body)
-                    .foregroundStyle(isRead ? .secondary : .primary)
+                HStack(spacing: 6) {
+                    Text(chapter.displayName)
+                        .font(.body)
+                        .foregroundStyle(isRead ? .secondary : .primary)
+
+                    if isNew {
+                        Text("New")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .cornerRadius(4)
+                    }
+                }
 
                 HStack(spacing: 8) {
                     if let scanlator = chapter.scanlator, !scanlator.isEmpty {
@@ -325,6 +439,11 @@ struct ChapterRowView: View {
             Spacer()
 
             HStack(spacing: 8) {
+                if isRead {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+
                 if chapter.isDownloaded {
                     Image(systemName: "arrow.down.circle.fill")
                         .foregroundStyle(.green)
@@ -343,6 +462,15 @@ struct ChapterRowView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
+        .contextMenu {
+            Button(action: isRead ? onMarkUnread : onMarkRead) {
+                Label(isRead ? "Mark as Unread" : "Mark as Read",
+                      systemImage: isRead ? "circle" : "checkmark.circle")
+            }
+            Button(action: onDownload) {
+                Label("Download", systemImage: "arrow.down.circle")
+            }
+        }
     }
 }
 
@@ -403,6 +531,8 @@ final class MangaDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var deviceReadStatus: [Int: Bool] = [:] // chapter ID -> device-specific read status
     @Published var continueChapterProgress: ProgressData?
+    @Published var chapterSortAscending: Bool = UserDefaults.standard.bool(forKey: UserDefaultsKeys.chapterSortAscending)
+    @Published var showDownloadComingSoon = false
 
     var firstUnreadChapter: Chapter? {
         // Use device-specific read status if available, otherwise use server status
@@ -459,6 +589,16 @@ final class MangaDetailViewModel: ObservableObject {
         self.mangaId = mangaId
     }
 
+    func toggleSort() {
+        chapterSortAscending.toggle()
+        UserDefaults.standard.set(chapterSortAscending, forKey: UserDefaultsKeys.chapterSortAscending)
+        sortChapters()
+    }
+
+    private func sortChapters() {
+        chapters.sort { chapterSortAscending ? $0.sourceOrder < $1.sourceOrder : $0.sourceOrder > $1.sourceOrder }
+    }
+
     func loadManga(forceRefresh: Bool = false) async {
         isLoading = true
         errorMessage = nil
@@ -466,7 +606,7 @@ final class MangaDetailViewModel: ObservableObject {
         do {
             manga = try await MangaRepository.shared.getManga(id: mangaId, forceRefresh: forceRefresh)
             chapters = try await MangaRepository.shared.getChapters(mangaId: mangaId)
-            chapters.sort { $0.sourceOrder > $1.sourceOrder }
+            sortChapters()
 
             // Load device-specific read status
             await loadDeviceReadStatus()
@@ -509,7 +649,7 @@ final class MangaDetailViewModel: ObservableObject {
         isLoading = true
         do {
             chapters = try await MangaRepository.shared.fetchChapters(mangaId: mangaId)
-            chapters.sort { $0.sourceOrder > $1.sourceOrder }
+            sortChapters()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -546,6 +686,34 @@ final class MangaDetailViewModel: ObservableObject {
         // Repository handles both local save and server sync
         await ChapterRepository.shared.markChaptersRead(chapterIds: chapterIds, isRead: false)
         await loadManga(forceRefresh: true)
+    }
+
+    func markChapterRead(chapterId: Int) {
+        ReadingProgressManager.shared.updateProgress(
+            chapterId: String(chapterId),
+            seriesId: String(mangaId),
+            percentage: 1.0,
+            pageIndex: Int.max,
+            isRead: true
+        )
+        // Update local state for immediate UI feedback
+        deviceReadStatus[chapterId] = true
+    }
+
+    func markChapterUnread(chapterId: Int) {
+        ReadingProgressManager.shared.updateProgress(
+            chapterId: String(chapterId),
+            seriesId: String(mangaId),
+            percentage: 0.0,
+            pageIndex: 0,
+            isRead: false
+        )
+        // Update local state for immediate UI feedback
+        deviceReadStatus[chapterId] = false
+    }
+
+    func downloadChapter(chapterId: Int) {
+        showDownloadComingSoon = true
     }
 }
 

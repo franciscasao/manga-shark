@@ -13,6 +13,7 @@ enum UserDefaultsKeys {
     static let showNsfwSources = "show_nsfw_sources"
     static let deviceId = "device_id"
     static let manhwaScrollOffsetPrefix = "manhwa_scroll_offset_"
+    static let chapterSortAscending = "chapter_sort_ascending"
 }
 
 @propertyWrapper
