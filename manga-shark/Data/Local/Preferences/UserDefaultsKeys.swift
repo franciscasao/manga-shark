@@ -12,6 +12,7 @@ enum UserDefaultsKeys {
     static let selectedCategoryId = "selected_category_id"
     static let showNsfwSources = "show_nsfw_sources"
     static let deviceId = "device_id"
+    static let manhwaScrollOffsetPrefix = "manhwa_scroll_offset_"
 }
 
 @propertyWrapper

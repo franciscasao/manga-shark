@@ -66,11 +66,21 @@ struct ReaderView: View {
                 onTap: { toggleControls() }
             )
         case .webtoon:
-            WebtoonReaderView(
+            ManhwaReaderRepresentable(
                 pages: viewModel.pages,
-                currentPage: $viewModel.currentPageIndex,
-                onTap: { toggleControls() }
+                chapterId: viewModel.currentChapter.id,
+                serverUrl: AuthManager.shared.serverConfig.serverUrl,
+                authHeader: AuthManager.shared.authorizationHeader,
+                initialScrollOffset: viewModel.manhwaScrollOffset
             )
+            .onTapToToggleControls { toggleControls() }
+            .onProgressUpdate { percentage, offsetY, visibleIndex in
+                viewModel.updateManhwaProgress(scrollPercentage: percentage, offsetY: offsetY, visiblePageIndex: visibleIndex)
+            }
+            .onReachEnd {
+                // Could trigger next chapter here if desired
+            }
+            .ignoresSafeArea()
         }
     }
 
@@ -244,7 +254,12 @@ struct WebtoonReaderView: View {
                     }
                 }
             }
+            .onAppear {
+                // Set initial position without animation
+                proxy.scrollTo(currentPage, anchor: .top)
+            }
             .onChange(of: currentPage) { newValue in
+                // Animate subsequent page changes
                 withAnimation {
                     proxy.scrollTo(newValue, anchor: .top)
                 }
@@ -347,6 +362,8 @@ final class ReaderViewModel: ObservableObject {
     @Published var readerMode: ReaderMode = .paged
     @Published var readingDirection: ReadingDirection = .rightToLeft
     @Published var showSettings = false
+    @Published var manhwaScrollOffset: CGFloat?
+    @Published var manhwaScrollPercentage: CGFloat = 0
 
     var hasPreviousChapter: Bool {
         guard let currentIndex = chapters.firstIndex(where: { $0.id == currentChapter.id }) else {
@@ -394,11 +411,28 @@ final class ReaderViewModel: ObservableObject {
                 // Fallback to server progress (for chapters not yet read on this device)
                 currentPageIndex = min(currentChapter.lastPageRead, max(0, pages.count - 1))
             }
+
+            // Load manhwa scroll offset if in webtoon mode
+            if readerMode == .webtoon {
+                manhwaScrollOffset = ManhwaProgressManager.shared.loadScrollOffset(forChapterId: currentChapter.id)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
+    }
+
+    func updateManhwaProgress(scrollPercentage: CGFloat, offsetY: CGFloat, visiblePageIndex: Int) {
+        manhwaScrollPercentage = scrollPercentage
+        manhwaScrollOffset = offsetY
+        currentPageIndex = visiblePageIndex
+
+        // Calculate which page we're on based on scroll percentage for progress tracking
+        if !pages.isEmpty {
+            let estimatedPage = Int(scrollPercentage * CGFloat(pages.count - 1))
+            currentPageIndex = min(estimatedPage, pages.count - 1)
+        }
     }
 
     func saveProgress() async {
@@ -421,10 +455,9 @@ final class ReaderViewModel: ObservableObject {
         }
 
         await saveProgress()
+        pages = []  // Trigger loading view first
         currentChapter = chapters[currentIndex + 1]
-        currentPageIndex = 0
-        pages = []
-        await loadPages()
+        await loadPages()  // This will set currentPageIndex to saved progress
     }
 
     func nextChapter() async {
@@ -434,10 +467,9 @@ final class ReaderViewModel: ObservableObject {
         }
 
         await saveProgress()
+        pages = []  // Trigger loading view first
         currentChapter = chapters[currentIndex - 1]
-        currentPageIndex = 0
-        pages = []
-        await loadPages()
+        await loadPages()  // This will set currentPageIndex to saved progress
     }
 
     func setReaderMode(_ mode: ReaderMode) {
