@@ -278,7 +278,7 @@ struct MangaDetailContent: View {
     private var chaptersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("\(viewModel.chapters.count) Chapters")
+                Text("\(viewModel.filteredChapters.count) Chapters")
                     .font(.headline)
 
                 Spacer()
@@ -294,6 +294,21 @@ struct MangaDetailContent: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+
+                Button {
+                    viewModel.showScanlatorFilter = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.selectedScanlators.isEmpty ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                        if !viewModel.selectedScanlators.isEmpty {
+                            Text("\(viewModel.selectedScanlators.count)")
+                                .font(.caption)
+                        }
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(viewModel.selectedScanlators.isEmpty ? nil : .blue)
 
                 Menu {
                     Button(action: {
@@ -312,13 +327,19 @@ struct MangaDetailContent: View {
                 }
             }
 
-            if viewModel.chapters.isEmpty {
-                Text("No chapters available")
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical)
+            if viewModel.filteredChapters.isEmpty {
+                if viewModel.chapters.isEmpty {
+                    Text("No chapters available")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical)
+                } else {
+                    Text("No chapters match the current filter")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical)
+                }
             } else {
                 LazyVStack(spacing: 0) {
-                    ForEach(viewModel.chapters) { chapter in
+                    ForEach(viewModel.filteredChapters) { chapter in
                         let queryRead = isChapterReadFromQuery?(chapter.id) ?? false
                         let chapterIsRead = queryRead || (viewModel.deviceReadStatus[chapter.id] ?? chapter.isRead)
 
@@ -333,7 +354,7 @@ struct MangaDetailContent: View {
                         }
                         .buttonStyle(.plain)
 
-                        if chapter.id != viewModel.chapters.last?.id {
+                        if chapter.id != viewModel.filteredChapters.last?.id {
                             Divider()
                         }
                     }
@@ -341,6 +362,9 @@ struct MangaDetailContent: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(8)
             }
+        }
+        .sheet(isPresented: $viewModel.showScanlatorFilter) {
+            ScanlatorFilterSheet(viewModel: viewModel)
         }
     }
 }
@@ -474,6 +498,58 @@ struct ChapterRowView: View {
     }
 }
 
+struct ScanlatorFilterSheet: View {
+    @ObservedObject var viewModel: MangaDetailViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if viewModel.uniqueScanlators.isEmpty {
+                    Text("No scanlators available")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Section {
+                        ForEach(viewModel.uniqueScanlators, id: \.self) { scanlator in
+                            Button {
+                                viewModel.toggleScanlator(scanlator)
+                            } label: {
+                                HStack {
+                                    Text(scanlator)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    if viewModel.selectedScanlators.contains(scanlator) {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.blue)
+                                    }
+                                }
+                            }
+                        }
+                    } footer: {
+                        Text("Select scanlators to show. When none selected, all chapters are shown.")
+                    }
+                }
+            }
+            .navigationTitle("Filter by Scanlator")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        viewModel.clearScanlatorFilter()
+                    }
+                    .disabled(viewModel.selectedScanlators.isEmpty)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
 struct FlowLayout: Layout {
     let spacing: CGFloat
 
@@ -533,6 +609,25 @@ final class MangaDetailViewModel: ObservableObject {
     @Published var continueChapterProgress: ProgressData?
     @Published var chapterSortAscending: Bool = UserDefaults.standard.bool(forKey: UserDefaultsKeys.chapterSortAscending)
     @Published var showDownloadComingSoon = false
+    @Published var showScanlatorFilter = false
+    @Published var selectedScanlators: Set<String> = []  // Empty = show all
+
+    var uniqueScanlators: [String] {
+        let scanlators = chapters.compactMap { $0.scanlator }.filter { !$0.isEmpty }
+        return Array(Set(scanlators)).sorted()
+    }
+
+    var filteredChapters: [Chapter] {
+        if selectedScanlators.isEmpty {
+            return chapters
+        }
+        return chapters.filter { chapter in
+            guard let scanlator = chapter.scanlator, !scanlator.isEmpty else {
+                return false  // Hide chapters without scanlator when filtering
+            }
+            return selectedScanlators.contains(scanlator)
+        }
+    }
 
     var firstUnreadChapter: Chapter? {
         // Use device-specific read status if available, otherwise use server status
@@ -607,6 +702,9 @@ final class MangaDetailViewModel: ObservableObject {
             manga = try await MangaRepository.shared.getManga(id: mangaId, forceRefresh: forceRefresh)
             chapters = try await MangaRepository.shared.getChapters(mangaId: mangaId)
             sortChapters()
+
+            // Load saved scanlator filter
+            await loadSavedFilter()
 
             // Load device-specific read status
             await loadDeviceReadStatus()
@@ -714,6 +812,36 @@ final class MangaDetailViewModel: ObservableObject {
 
     func downloadChapter(chapterId: Int) {
         showDownloadComingSoon = true
+    }
+
+    func toggleScanlator(_ scanlator: String) {
+        if selectedScanlators.contains(scanlator) {
+            selectedScanlators.remove(scanlator)
+        } else {
+            selectedScanlators.insert(scanlator)
+        }
+        Task {
+            await ScanlatorFilterManager.shared.saveFilter(
+                mangaId: String(mangaId),
+                scanlators: selectedScanlators
+            )
+        }
+    }
+
+    func selectAllScanlators() {
+        selectedScanlators = Set(uniqueScanlators)
+    }
+
+    func clearScanlatorFilter() {
+        selectedScanlators.removeAll()
+        Task {
+            await ScanlatorFilterManager.shared.clearFilter(mangaId: String(mangaId))
+        }
+    }
+
+    func loadSavedFilter() async {
+        let saved = await ScanlatorFilterManager.shared.getFilter(for: String(mangaId))
+        selectedScanlators = saved
     }
 }
 

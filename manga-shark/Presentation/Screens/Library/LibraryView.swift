@@ -164,18 +164,36 @@ final class LibraryViewModel: ObservableObject {
     func calculateDeviceUnreadCounts() async {
         print("📊 [LibraryViewModel] Calculating device-specific unread counts for \(library.count) manga")
 
+        // Load all scanlator filters once at start
+        let allFilters = await ScanlatorFilterManager.shared.getAllFilters()
+
         for manga in library {
             do {
                 // Fetch chapters for this manga
                 let chapters = try await MangaRepository.shared.getChapters(mangaId: manga.id)
-                let chapterIds = chapters.map { $0.id }
+
+                // Apply scanlator filter if exists for this manga
+                let filter = allFilters[String(manga.id)] ?? Set()
+                let filteredChapters: [Chapter]
+                if filter.isEmpty {
+                    filteredChapters = chapters
+                } else {
+                    filteredChapters = chapters.filter { chapter in
+                        guard let scanlator = chapter.scanlator, !scanlator.isEmpty else {
+                            return false
+                        }
+                        return filter.contains(scanlator)
+                    }
+                }
+
+                let chapterIds = filteredChapters.map { $0.id }
 
                 // Use ReadingProgressManager which reads from correct source per iOS version
                 let readStatus = await ReadingProgressManager.shared.getReadStatus(for: chapterIds)
 
                 // Calculate unread count: chapters not marked as read
                 var unreadCount = 0
-                for chapter in chapters {
+                for chapter in filteredChapters {
                     let isRead = readStatus[chapter.id] ?? chapter.isRead
                     if !isRead {
                         unreadCount += 1
@@ -184,7 +202,7 @@ final class LibraryViewModel: ObservableObject {
 
                 // Update the dictionary
                 deviceUnreadCounts[manga.id] = unreadCount
-                print("✅ [LibraryViewModel] Manga '\(manga.title)' - Device unread: \(unreadCount), Server unread: \(manga.unreadCount)")
+                print("✅ [LibraryViewModel] Manga '\(manga.title)' - Device unread: \(unreadCount), Server unread: \(manga.unreadCount), Filter: \(filter.isEmpty ? "none" : "\(filter.count) scanlators")")
             } catch {
                 print("❌ [LibraryViewModel] Failed to calculate unread count for manga \(manga.id): \(error)")
                 // Keep server unread count on error

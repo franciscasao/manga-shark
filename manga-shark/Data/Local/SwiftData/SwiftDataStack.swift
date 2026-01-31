@@ -15,7 +15,7 @@ actor SwiftDataStack {
                 return existing
             }
 
-            let schema = Schema([ChapterProgress.self])
+            let schema = Schema([ChapterProgress.self, MangaScanlatorFilter.self])
             let configuration = ModelConfiguration(
                 schema: schema,
                 cloudKitDatabase: .automatic
