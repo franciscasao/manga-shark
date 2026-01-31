@@ -162,16 +162,25 @@ final class LibraryViewModel: ObservableObject {
     }
 
     func calculateDeviceUnreadCounts() async {
-        let deviceId = DeviceIdentifierManager.shared.deviceId
         print("📊 [LibraryViewModel] Calculating device-specific unread counts for \(library.count) manga")
 
         for manga in library {
             do {
                 // Fetch chapters for this manga
                 let chapters = try await MangaRepository.shared.getChapters(mangaId: manga.id)
+                let chapterIds = chapters.map { $0.id }
 
-                // Calculate device-specific unread count
-                let unreadCount = try await CoreDataStack.shared.getDeviceUnreadCount(chapters: chapters, deviceId: deviceId)
+                // Use ReadingProgressManager which reads from correct source per iOS version
+                let readStatus = await ReadingProgressManager.shared.getReadStatus(for: chapterIds)
+
+                // Calculate unread count: chapters not marked as read
+                var unreadCount = 0
+                for chapter in chapters {
+                    let isRead = readStatus[chapter.id] ?? chapter.isRead
+                    if !isRead {
+                        unreadCount += 1
+                    }
+                }
 
                 // Update the dictionary
                 deviceUnreadCounts[manga.id] = unreadCount
