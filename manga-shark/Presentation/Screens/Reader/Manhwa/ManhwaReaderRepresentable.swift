@@ -6,7 +6,7 @@ struct ManhwaReaderRepresentable: UIViewControllerRepresentable {
     let chapterId: Int
     let serverUrl: String
     let authHeader: String?
-    let initialScrollOffset: CGFloat?
+    let initialScrollPercentage: Double?
 
     var onTapToToggleControls: (() -> Void)?
     var onProgressUpdate: ((CGFloat, CGFloat, Int) -> Void)?
@@ -19,7 +19,7 @@ struct ManhwaReaderRepresentable: UIViewControllerRepresentable {
             chapterId: chapterId,
             serverUrl: serverUrl,
             authHeader: authHeader,
-            initialScrollOffset: initialScrollOffset
+            initialScrollPercentage: initialScrollPercentage
         )
         controller.delegate = context.coordinator
         return controller

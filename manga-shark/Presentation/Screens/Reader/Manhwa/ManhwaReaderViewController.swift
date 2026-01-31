@@ -16,7 +16,7 @@ final class ManhwaReaderViewController: UIViewController {
     private let chapterId: Int
     private let serverUrl: String
     private let authHeader: String?
-    private var initialScrollOffset: CGFloat?
+    private var initialScrollPercentage: Double?
 
     private var collectionView: UICollectionView!
     private var progressBar: UIProgressView!
@@ -27,12 +27,12 @@ final class ManhwaReaderViewController: UIViewController {
     private var scrollThrottleTimer: Timer?
     private let scrollThrottleInterval: TimeInterval = 0.1
 
-    init(pages: [Page], chapterId: Int, serverUrl: String, authHeader: String?, initialScrollOffset: CGFloat? = nil) {
+    init(pages: [Page], chapterId: Int, serverUrl: String, authHeader: String?, initialScrollPercentage: Double? = nil) {
         self.pages = pages
         self.chapterId = chapterId
         self.serverUrl = serverUrl
         self.authHeader = authHeader
-        self.initialScrollOffset = initialScrollOffset
+        self.initialScrollPercentage = initialScrollPercentage
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -52,11 +52,15 @@ final class ManhwaReaderViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        if !hasSetInitialOffset, let offset = initialScrollOffset {
+        if !hasSetInitialOffset, let percentage = initialScrollPercentage, percentage > 0 {
             collectionView.layoutIfNeeded()
-            let maxOffset = max(0, collectionView.contentSize.height - collectionView.bounds.height)
-            let clampedOffset = min(offset, maxOffset)
-            collectionView.contentOffset = CGPoint(x: 0, y: clampedOffset)
+            // Calculate actual offset from percentage after layout is complete
+            let scrollableHeight = collectionView.contentSize.height - collectionView.bounds.height
+            if scrollableHeight > 0 {
+                let targetOffset = CGFloat(percentage) * scrollableHeight
+                let clampedOffset = min(max(0, targetOffset), scrollableHeight)
+                collectionView.contentOffset = CGPoint(x: 0, y: clampedOffset)
+            }
             hasSetInitialOffset = true
         }
     }
@@ -131,15 +135,8 @@ final class ManhwaReaderViewController: UIViewController {
     }
 
     private func saveCurrentProgress() {
-        let offsetY = collectionView.contentOffset.y
-        let contentHeight = collectionView.contentSize.height
-        let viewHeight = collectionView.bounds.height
-
-        let scrollableHeight = contentHeight - viewHeight
-        let percentage: CGFloat = scrollableHeight > 0 ? offsetY / scrollableHeight : 0
-
-        ManhwaProgressManager.shared.saveScrollOffset(offsetY, forChapterId: chapterId)
-        ManhwaProgressManager.shared.saveScrollPercentage(percentage, forChapterId: chapterId)
+        // Progress is now saved via delegate callback to ReaderViewModel
+        // which uses ReadingProgressManager (SwiftData + CloudKit)
     }
 
     private func updateProgressThrottled() {

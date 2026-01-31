@@ -71,7 +71,7 @@ struct ReaderView: View {
                 chapterId: viewModel.currentChapter.id,
                 serverUrl: AuthManager.shared.serverConfig.serverUrl,
                 authHeader: AuthManager.shared.authorizationHeader,
-                initialScrollOffset: viewModel.manhwaScrollOffset
+                initialScrollPercentage: viewModel.manhwaScrollPercentage
             )
             .onTapToToggleControls { toggleControls() }
             .onProgressUpdate { percentage, offsetY, visibleIndex in
@@ -362,8 +362,7 @@ final class ReaderViewModel: ObservableObject {
     @Published var readerMode: ReaderMode = .paged
     @Published var readingDirection: ReadingDirection = .rightToLeft
     @Published var showSettings = false
-    @Published var manhwaScrollOffset: CGFloat?
-    @Published var manhwaScrollPercentage: CGFloat = 0
+    @Published var manhwaScrollPercentage: Double = 0
 
     var hasPreviousChapter: Bool {
         guard let currentIndex = chapters.firstIndex(where: { $0.id == currentChapter.id }) else {
@@ -399,22 +398,25 @@ final class ReaderViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
+        // Begin reading session
+        ReadingProgressManager.shared.beginReading(chapterId: String(currentChapter.id))
+
         do {
             pages = try await ChapterRepository.shared.getChapterPages(chapterId: currentChapter.id)
 
-            // Get device-specific progress from CoreData
-            let deviceId = DeviceIdentifierManager.shared.deviceId
-            if let progress = try? await CoreDataStack.shared.getChapterProgress(chapterId: currentChapter.id, deviceId: deviceId) {
-                // Use device-specific progress
-                currentPageIndex = min(progress.lastPageRead, max(0, pages.count - 1))
+            // Get progress from SwiftData (iOS 17+) or CoreData (iOS 16)
+            if let progress: ProgressData = await ReadingProgressManager.shared.getProgress(for: String(currentChapter.id)) {
+                // Use saved progress
+                currentPageIndex = min(progress.lastPageIndex, max(0, pages.count - 1))
+                manhwaScrollPercentage = progress.lastReadPercentage
             } else {
-                // Fallback to server progress (for chapters not yet read on this device)
+                // Fallback to server progress (for chapters not yet read)
                 currentPageIndex = min(currentChapter.lastPageRead, max(0, pages.count - 1))
-            }
 
-            // Load manhwa scroll offset if in webtoon mode
-            if readerMode == .webtoon {
-                manhwaScrollOffset = ManhwaProgressManager.shared.loadScrollOffset(forChapterId: currentChapter.id)
+                // Calculate percentage from page index for webtoon mode
+                if pages.count > 1 {
+                    manhwaScrollPercentage = Double(currentPageIndex) / Double(pages.count - 1)
+                }
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -424,8 +426,7 @@ final class ReaderViewModel: ObservableObject {
     }
 
     func updateManhwaProgress(scrollPercentage: CGFloat, offsetY: CGFloat, visiblePageIndex: Int) {
-        manhwaScrollPercentage = scrollPercentage
-        manhwaScrollOffset = offsetY
+        manhwaScrollPercentage = Double(scrollPercentage)
         currentPageIndex = visiblePageIndex
 
         // Calculate which page we're on based on scroll percentage for progress tracking
@@ -433,6 +434,16 @@ final class ReaderViewModel: ObservableObject {
             let estimatedPage = Int(scrollPercentage * CGFloat(pages.count - 1))
             currentPageIndex = min(estimatedPage, pages.count - 1)
         }
+
+        // Update progress in SwiftData (throttled)
+        let isRead = scrollPercentage >= 0.95
+        ReadingProgressManager.shared.updateProgress(
+            chapterId: String(currentChapter.id),
+            seriesId: String(currentChapter.mangaId),
+            percentage: Double(scrollPercentage),
+            pageIndex: currentPageIndex,
+            isRead: isRead
+        )
     }
 
     func saveProgress() async {
@@ -440,7 +451,27 @@ final class ReaderViewModel: ObservableObject {
 
         let isRead = currentPageIndex >= pages.count - 1
 
-        // Local-first: saves immediately to CoreData, syncs to server in background
+        // Calculate percentage based on mode
+        let percentage: Double
+        if readerMode == .webtoon {
+            percentage = manhwaScrollPercentage
+        } else {
+            percentage = ReadingProgressManager.calculatePercentage(pageIndex: currentPageIndex, totalPages: pages.count)
+        }
+
+        // Save to SwiftData (syncs via CloudKit) and server
+        ReadingProgressManager.shared.updateProgress(
+            chapterId: String(currentChapter.id),
+            seriesId: String(currentChapter.mangaId),
+            percentage: percentage,
+            pageIndex: currentPageIndex,
+            isRead: isRead
+        )
+
+        // End reading session
+        ReadingProgressManager.shared.endReading()
+
+        // Also sync to server for non-iOS clients
         await ChapterRepository.shared.updateProgress(
             chapterId: currentChapter.id,
             lastPageRead: currentPageIndex,

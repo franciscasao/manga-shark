@@ -29,21 +29,10 @@ actor ChapterRepository {
     }
 
     func updateProgress(chapterId: Int, lastPageRead: Int, isRead: Bool) async {
-        // Phase 1: Local save (immediate, device-specific)
-        let deviceId = await MainActor.run { DeviceIdentifierManager.shared.deviceId }
-        do {
-            try await CoreDataStack.shared.updateChapterProgress(
-                chapterId: chapterId,
-                deviceId: deviceId,
-                lastPageRead: lastPageRead,
-                isRead: isRead
-            )
-            print("✅ [ChapterRepository] Local progress saved for chapter \(chapterId)")
-        } catch {
-            print("⚠️ [ChapterRepository] Local save failed for chapter \(chapterId): \(error)")
-        }
+        // Local progress is now managed by ReadingProgressManager (SwiftData + CloudKit)
+        // This method only handles server sync for non-iOS clients
 
-        // Phase 2: Server sync (detached, non-blocking, global progress)
+        // Server sync (detached, non-blocking, global progress)
         Task.detached(priority: .utility) {
             await Self.syncProgressToServer(
                 chapterId: chapterId,
@@ -71,20 +60,21 @@ actor ChapterRepository {
     }
 
     func markChaptersRead(chapterIds: [Int], isRead: Bool) async {
-        // Phase 1: Local save (immediate, device-specific)
-        let deviceId = await MainActor.run { DeviceIdentifierManager.shared.deviceId }
-        do {
-            try await CoreDataStack.shared.updateChaptersReadStatus(
-                chapterIds: chapterIds,
-                deviceId: deviceId,
-                isRead: isRead
-            )
-            print("✅ [ChapterRepository] Local bulk update saved for \(chapterIds.count) chapters")
-        } catch {
-            print("⚠️ [ChapterRepository] Local bulk save failed for \(chapterIds.count) chapters: \(error)")
+        // Local progress is now managed by ReadingProgressManager (SwiftData + CloudKit)
+        // Update each chapter in SwiftData
+        await MainActor.run {
+            for chapterId in chapterIds {
+                ReadingProgressManager.shared.updateProgress(
+                    chapterId: String(chapterId),
+                    seriesId: "",  // Will be updated on next read
+                    percentage: isRead ? 1.0 : 0.0,
+                    pageIndex: 0,
+                    isRead: isRead
+                )
+            }
         }
 
-        // Phase 2: Server sync (detached, non-blocking, global progress)
+        // Server sync (detached, non-blocking, global progress)
         Task.detached(priority: .utility) {
             await Self.syncChaptersReadToServer(chapterIds: chapterIds, isRead: isRead)
         }
