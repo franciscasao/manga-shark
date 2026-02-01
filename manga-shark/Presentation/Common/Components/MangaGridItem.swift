@@ -86,7 +86,7 @@ struct AsyncCachedImage: View {
     }
 }
 
-// iOS 16 compatible replacement for ContentUnavailableView
+// Custom empty state view component
 struct EmptyStateView<Label: View, Description: View>: View {
     let label: Label
     let description: Description

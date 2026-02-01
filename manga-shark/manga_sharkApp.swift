@@ -12,15 +12,9 @@ import SwiftData
 struct manga_sharkApp: App {
     @StateObject private var appState = AppState.shared
 
-    init() {
-        // Configure SwiftData for iOS 17+
-        if #available(iOS 17, *) {
-            Self.configureSwiftData()
-        }
-    }
+    let modelContainer: ModelContainer
 
-    @available(iOS 17, *)
-    private static func configureSwiftData() {
+    init() {
         do {
             let schema = Schema([ChapterProgress.self, MangaScanlatorFilter.self, ReadingHistory.self])
             let configuration = ModelConfiguration(
@@ -28,44 +22,29 @@ struct manga_sharkApp: App {
                 cloudKitDatabase: .automatic
             )
             let container = try ModelContainer(for: schema, configurations: [configuration])
-
-            // Store container for later use
-            SwiftDataContainerHolder.shared.container = container
+            self.modelContainer = container
 
             // Configure managers with the container
             Task { @MainActor in
-                ReadingProgressManageriOS17.shared.configure(with: container)
-                ScanlatorFilterManageriOS17.shared.configure(with: container)
-                HistoryManageriOS17.shared.configure(with: container)
+                ReadingProgressManager.shared.configure(with: container)
+                ScanlatorFilterManager.shared.configure(with: container)
+                HistoryManager.shared.configure(with: container)
             }
         } catch {
-            print("Failed to create ModelContainer: \(error)")
+            fatalError("Failed to create ModelContainer: \(error)")
         }
     }
 
     var body: some Scene {
         WindowGroup {
-            if #available(iOS 17, *), let container = SwiftDataContainerHolder.shared.container {
-                RootView()
-                    .environmentObject(appState)
-                    .modelContainer(container)
-                    .task {
-                        await ProgressMigrationManager.shared.migrateIfNeeded(to: container)
-                    }
-            } else {
-                RootView()
-                    .environmentObject(appState)
-            }
+            RootView()
+                .environmentObject(appState)
+                .modelContainer(modelContainer)
+                .task {
+                    await ProgressMigrationManager.shared.migrateIfNeeded(to: modelContainer)
+                }
         }
     }
-}
-
-/// Holder for SwiftData container to work around @available limitations
-@available(iOS 17, *)
-final class SwiftDataContainerHolder {
-    static let shared = SwiftDataContainerHolder()
-    var container: ModelContainer?
-    private init() {}
 }
 
 struct RootView: View {

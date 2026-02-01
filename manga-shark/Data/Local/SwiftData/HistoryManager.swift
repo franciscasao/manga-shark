@@ -1,12 +1,11 @@
 import Foundation
 import SwiftData
 
-// MARK: - iOS 17+ SwiftData Implementation
+// MARK: - History Manager
 
-@available(iOS 17, *)
 @MainActor
-final class HistoryManageriOS17 {
-    static let shared = HistoryManageriOS17()
+final class HistoryManager {
+    static let shared = HistoryManager()
     private var container: ModelContainer?
 
     private init() {}
@@ -133,153 +132,6 @@ final class HistoryManageriOS17 {
         } catch {
             print("⚠️ [HistoryManager] Failed to fetch history: \(error)")
             return []
-        }
-    }
-}
-
-// MARK: - iOS 16 UserDefaults Fallback
-
-final class HistoryStorageiOS16 {
-    static let shared = HistoryStorageiOS16()
-    private let historyKey = "readingHistory"
-    private let maxEntries = 100
-
-    private init() {}
-
-    func recordReading(
-        mangaId: String,
-        chapterId: String,
-        seriesName: String,
-        chapterName: String,
-        chapterNumber: Double,
-        thumbnailUrl: String?,
-        progressPercentage: Double,
-        lastPageIndex: Int
-    ) {
-        var entries = getAllEntries()
-
-        // Remove existing entry for this manga
-        entries.removeAll { $0.mangaId == mangaId }
-
-        // Add new entry at the beginning
-        let newEntry = HistoryEntry(
-            mangaId: mangaId,
-            chapterId: chapterId,
-            seriesName: seriesName,
-            chapterName: chapterName,
-            chapterNumber: chapterNumber,
-            thumbnailUrl: thumbnailUrl,
-            lastReadDate: Date(),
-            progressPercentage: progressPercentage,
-            lastPageIndex: lastPageIndex
-        )
-        entries.insert(newEntry, at: 0)
-
-        // Keep only the most recent entries
-        if entries.count > maxEntries {
-            entries = Array(entries.prefix(maxEntries))
-        }
-
-        saveEntries(entries)
-    }
-
-    func deleteEntry(mangaId: String) {
-        var entries = getAllEntries()
-        entries.removeAll { $0.mangaId == mangaId }
-        saveEntries(entries)
-    }
-
-    func clearAllHistory() {
-        UserDefaults.standard.removeObject(forKey: historyKey)
-    }
-
-    func getAllEntries() -> [HistoryEntry] {
-        guard let data = UserDefaults.standard.data(forKey: historyKey) else {
-            return []
-        }
-
-        do {
-            return try JSONDecoder().decode([HistoryEntry].self, from: data)
-        } catch {
-            print("⚠️ [HistoryStorageiOS16] Failed to decode history: \(error)")
-            return []
-        }
-    }
-
-    private func saveEntries(_ entries: [HistoryEntry]) {
-        do {
-            let data = try JSONEncoder().encode(entries)
-            UserDefaults.standard.set(data, forKey: historyKey)
-        } catch {
-            print("⚠️ [HistoryStorageiOS16] Failed to save history: \(error)")
-        }
-    }
-}
-
-// MARK: - Cross-Platform Wrapper
-
-@MainActor
-final class HistoryManager {
-    static let shared = HistoryManager()
-
-    private init() {}
-
-    func recordReading(
-        mangaId: String,
-        chapterId: String,
-        seriesName: String,
-        chapterName: String,
-        chapterNumber: Double,
-        thumbnailUrl: String?,
-        progressPercentage: Double,
-        lastPageIndex: Int
-    ) async {
-        if #available(iOS 17, *) {
-            await HistoryManageriOS17.shared.recordReading(
-                mangaId: mangaId,
-                chapterId: chapterId,
-                seriesName: seriesName,
-                chapterName: chapterName,
-                chapterNumber: chapterNumber,
-                thumbnailUrl: thumbnailUrl,
-                progressPercentage: progressPercentage,
-                lastPageIndex: lastPageIndex
-            )
-        } else {
-            HistoryStorageiOS16.shared.recordReading(
-                mangaId: mangaId,
-                chapterId: chapterId,
-                seriesName: seriesName,
-                chapterName: chapterName,
-                chapterNumber: chapterNumber,
-                thumbnailUrl: thumbnailUrl,
-                progressPercentage: progressPercentage,
-                lastPageIndex: lastPageIndex
-            )
-        }
-    }
-
-    func deleteEntry(mangaId: String) async {
-        if #available(iOS 17, *) {
-            await HistoryManageriOS17.shared.deleteEntry(mangaId: mangaId)
-        } else {
-            HistoryStorageiOS16.shared.deleteEntry(mangaId: mangaId)
-        }
-    }
-
-    func clearAllHistory() async {
-        if #available(iOS 17, *) {
-            await HistoryManageriOS17.shared.clearAllHistory()
-        } else {
-            HistoryStorageiOS16.shared.clearAllHistory()
-        }
-    }
-
-    func getAllHistory() async -> [HistoryEntry] {
-        if #available(iOS 17, *) {
-            return await HistoryManageriOS17.shared.getAllHistory()
-        } else {
-            return HistoryStorageiOS16.shared.getAllEntries()
         }
     }
 }

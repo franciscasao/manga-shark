@@ -2,24 +2,9 @@ import SwiftUI
 import SwiftData
 import Combine
 
-// MARK: - Main Entry Point (routes to iOS-specific implementation)
+// MARK: - Main Entry Point
 
 struct MangaDetailView: View {
-    let mangaId: Int
-
-    var body: some View {
-        if #available(iOS 17, *) {
-            MangaDetailViewiOS17(mangaId: mangaId)
-        } else {
-            MangaDetailViewLegacy(mangaId: mangaId)
-        }
-    }
-}
-
-// MARK: - iOS 17+ Implementation with @Query
-
-@available(iOS 17, *)
-struct MangaDetailViewiOS17: View {
     let mangaId: Int
     @StateObject private var viewModel: MangaDetailViewModel
     @State private var showingCategorySheet = false
@@ -45,27 +30,6 @@ struct MangaDetailViewiOS17: View {
             viewModel: viewModel,
             showingCategorySheet: $showingCategorySheet,
             isChapterReadFromQuery: isChapterRead
-        )
-    }
-}
-
-// MARK: - iOS 16 Implementation (fallback without @Query)
-
-struct MangaDetailViewLegacy: View {
-    let mangaId: Int
-    @StateObject private var viewModel: MangaDetailViewModel
-    @State private var showingCategorySheet = false
-
-    init(mangaId: Int) {
-        self.mangaId = mangaId
-        _viewModel = StateObject(wrappedValue: MangaDetailViewModel(mangaId: mangaId))
-    }
-
-    var body: some View {
-        MangaDetailContent(
-            viewModel: viewModel,
-            showingCategorySheet: $showingCategorySheet,
-            isChapterReadFromQuery: nil
         )
     }
 }
@@ -668,7 +632,7 @@ final class MangaDetailViewModel: ObservableObject {
                 return "Continue Ch. \(chapterNum) • \(percentage)%"
             }
 
-            // Fallback: calculate from page index (iOS 16 or scroll mode)
+            // Fallback: calculate from page index (scroll mode)
             if progress.lastPageIndex > 0, firstUnread.pageCount > 0 {
                 let pagePercent = Int(Double(progress.lastPageIndex) / Double(firstUnread.pageCount) * 100)
                 if pagePercent > 0 && pagePercent < 100 {
@@ -726,7 +690,7 @@ final class MangaDetailViewModel: ObservableObject {
     func loadDeviceReadStatus() async {
         let chapterIds = chapters.map { $0.id }
 
-        // Use ReadingProgressManager which reads from correct source per iOS version
+        // Use ReadingProgressManager which reads from SwiftData
         let progressReadStatus = await ReadingProgressManager.shared.getReadStatus(for: chapterIds)
 
         // Merge with server status - device progress takes priority

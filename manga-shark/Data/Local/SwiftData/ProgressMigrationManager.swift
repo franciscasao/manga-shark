@@ -1,8 +1,6 @@
 import Foundation
 import SwiftData
-import CoreData
 
-@available(iOS 17, *)
 @MainActor
 final class ProgressMigrationManager {
     static let shared = ProgressMigrationManager()
@@ -24,7 +22,6 @@ final class ProgressMigrationManager {
         print("🔄 [ProgressMigrationManager] Starting migration...")
 
         do {
-            try await migrateFromCoreData(to: container)
             try await migrateFromUserDefaults(to: container)
 
             UserDefaults.standard.set(true, forKey: migrationKey)
@@ -32,54 +29,6 @@ final class ProgressMigrationManager {
         } catch {
             print("⚠️ [ProgressMigrationManager] Migration failed: \(error)")
         }
-    }
-
-    private func migrateFromCoreData(to container: ModelContainer) async throws {
-        let context = ModelContext(container)
-
-        // Fetch all CachedChapter records with progress from CoreData
-        let coreDataContext = await CoreDataStack.shared.newBackgroundContext()
-
-        let fetchRequest: NSFetchRequest<CachedChapter> = NSFetchRequest(entityName: "CachedChapter")
-        fetchRequest.predicate = NSPredicate(format: "lastPageRead > 0 OR isRead == YES")
-
-        let chapters = try await coreDataContext.perform {
-            try coreDataContext.fetch(fetchRequest)
-        }
-
-        print("🔄 [ProgressMigrationManager] Found \(chapters.count) chapters with progress in CoreData")
-
-        for cachedChapter in chapters {
-            let chapterId = String(cachedChapter.id)
-
-            // Check if we already have progress for this chapter
-            let descriptor = FetchDescriptor<ChapterProgress>(
-                predicate: #Predicate { $0.chapterId == chapterId }
-            )
-            let existingResults = try context.fetch(descriptor)
-
-            if existingResults.isEmpty {
-                // Calculate percentage from page index
-                let totalPages = max(1, Int(cachedChapter.pageCount))
-                let percentage = ReadingProgressManager.calculatePercentage(
-                    pageIndex: Int(cachedChapter.lastPageRead),
-                    totalPages: totalPages
-                )
-
-                let progress = ChapterProgress(
-                    chapterId: chapterId,
-                    seriesId: String(cachedChapter.mangaId),
-                    lastReadPercentage: percentage,
-                    updatedAt: cachedChapter.lastReadAt ?? Date(),
-                    isRead: cachedChapter.isRead,
-                    lastPageIndex: Int(cachedChapter.lastPageRead)
-                )
-                context.insert(progress)
-            }
-        }
-
-        try context.save()
-        print("✅ [ProgressMigrationManager] CoreData migration completed")
     }
 
     private func migrateFromUserDefaults(to container: ModelContainer) async throws {
@@ -102,8 +51,8 @@ final class ProgressMigrationManager {
             )
             let existingResults = try context.fetch(descriptor)
 
-            if let existing = existingResults.first {
-                // Update with UserDefaults percentage if it's more recent (we don't have timestamps, so skip if already exists)
+            if existingResults.first != nil {
+                // Skip if already exists
                 continue
             }
 

@@ -1,7 +1,6 @@
 import Foundation
 import SwiftData
 
-@available(iOS 17, *)
 @Model
 final class ReadingHistory: Hashable {
     @Attribute(.unique) var mangaId: String

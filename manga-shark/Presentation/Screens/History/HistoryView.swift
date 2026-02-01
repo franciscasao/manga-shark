@@ -1,22 +1,9 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Main Entry Point
+// MARK: - History View
 
 struct HistoryView: View {
-    var body: some View {
-        if #available(iOS 17, *) {
-            HistoryViewiOS17()
-        } else {
-            HistoryViewLegacy()
-        }
-    }
-}
-
-// MARK: - iOS 17+ with @Query
-
-@available(iOS 17, *)
-struct HistoryViewiOS17: View {
     @Query(sort: \ReadingHistory.lastReadDate, order: .reverse)
     private var historyEntries: [ReadingHistory]
 
@@ -102,107 +89,6 @@ struct HistoryViewiOS17: View {
             }
         }
         .listStyle(.plain)
-    }
-}
-
-// MARK: - iOS 16 Fallback
-
-struct HistoryViewLegacy: View {
-    @State private var entries: [HistoryEntry] = []
-    @State private var showingClearConfirmation = false
-    @State private var navigationPath = NavigationPath()
-
-    var body: some View {
-        NavigationStack(path: $navigationPath) {
-            Group {
-                if entries.isEmpty {
-                    emptyView
-                } else {
-                    historyList
-                }
-            }
-            .navigationTitle("History")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if !entries.isEmpty {
-                        Button(action: { showingClearConfirmation = true }) {
-                            Image(systemName: "trash")
-                        }
-                    }
-                }
-            }
-            .task {
-                await loadHistory()
-            }
-            .refreshable {
-                await loadHistory()
-            }
-            .confirmationDialog(
-                "Clear Reading History",
-                isPresented: $showingClearConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Clear All", role: .destructive) {
-                    Task {
-                        await HistoryManager.shared.clearAllHistory()
-                        await loadHistory()
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will remove all reading history. This action cannot be undone.")
-            }
-            .navigationDestination(for: HistoryEntry.self) { entry in
-                HistoryReaderDestination(
-                    mangaId: Int(entry.mangaId) ?? 0,
-                    chapterId: Int(entry.chapterId) ?? 0,
-                    mangaTitle: entry.seriesName,
-                    thumbnailUrl: entry.thumbnailUrl
-                )
-            }
-        }
-    }
-
-    private var emptyView: some View {
-        EmptyStateView {
-            Label("No History", systemImage: "clock.arrow.circlepath")
-        } description: {
-            Text("Manga you read will appear here")
-        }
-    }
-
-    private var historyList: some View {
-        List {
-            ForEach(entries) { entry in
-                Button {
-                    navigationPath.append(entry)
-                } label: {
-                    HistoryRowView(
-                        seriesName: entry.seriesName,
-                        chapterName: entry.chapterName,
-                        chapterNumber: entry.chapterNumber,
-                        thumbnailUrl: entry.thumbnailUrl,
-                        lastReadDate: entry.lastReadDate,
-                        progressPercentage: entry.progressPercentage
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-            .onDelete { indexSet in
-                Task {
-                    for index in indexSet {
-                        let entry = entries[index]
-                        await HistoryManager.shared.deleteEntry(mangaId: entry.mangaId)
-                    }
-                    await loadHistory()
-                }
-            }
-        }
-        .listStyle(.plain)
-    }
-
-    private func loadHistory() async {
-        entries = await HistoryManager.shared.getAllHistory()
     }
 }
 

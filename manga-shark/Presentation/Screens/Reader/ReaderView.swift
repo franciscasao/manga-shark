@@ -433,7 +433,7 @@ final class ReaderViewModel: ObservableObject {
         do {
             pages = try await ChapterRepository.shared.getChapterPages(chapterId: currentChapter.id)
 
-            // Get progress from SwiftData (iOS 17+) or CoreData (iOS 16)
+            // Get progress from SwiftData
             if let progress: ProgressData = await ReadingProgressManager.shared.getProgress(for: String(currentChapter.id)) {
                 // Use saved progress
                 currentPageIndex = min(progress.lastPageIndex, max(0, pages.count - 1))

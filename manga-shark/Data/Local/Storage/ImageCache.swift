@@ -1,15 +1,23 @@
 import Foundation
-import CoreData
 
 actor ImageCache {
     static let shared = ImageCache()
 
     private let memoryCache = NSCache<NSString, NSData>()
     private let maxCacheAge: TimeInterval = 7 * 24 * 60 * 60 // 7 days
+    private let fileManager = FileManager.default
+
+    private var cacheDirectory: URL {
+        let paths = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)
+        return paths[0].appendingPathComponent("ImageCache", isDirectory: true)
+    }
 
     private init() {
         memoryCache.countLimit = 100
         memoryCache.totalCostLimit = 50 * 1024 * 1024 // 50 MB
+
+        // Create cache directory if needed
+        try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
 
     func getImage(for url: String) async -> Data? {
@@ -32,97 +40,77 @@ actor ImageCache {
         await saveToDisk(data: data, url: url)
     }
 
+    private func fileURL(for url: String) -> URL {
+        // Create a safe filename from URL using hash
+        let filename = url.data(using: .utf8)?.base64EncodedString()
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "+", with: "-")
+            .prefix(100) ?? "unknown"
+        return cacheDirectory.appendingPathComponent(String(filename))
+    }
+
     private func loadFromDisk(url: String) async -> Data? {
-        do {
-            return try await CoreDataStack.shared.performBackgroundTask { context in
-                let request = NSFetchRequest<CachedImage>(entityName: "CachedImage")
-                request.predicate = NSPredicate(format: "url == %@", url)
-                request.fetchLimit = 1
+        let fileUrl = fileURL(for: url)
 
-                guard let cached = try context.fetch(request).first,
-                      let data = cached.data else {
-                    return nil
-                }
-
-                // Check if cache is still valid
-                if let cachedAt = cached.cachedAt,
-                   Date().timeIntervalSince(cachedAt) > self.maxCacheAge {
-                    context.delete(cached)
-                    try context.save()
-                    return nil
-                }
-
-                return data
-            }
-        } catch {
+        guard fileManager.fileExists(atPath: fileUrl.path) else {
             return nil
         }
+
+        // Check if cache is still valid
+        if let attributes = try? fileManager.attributesOfItem(atPath: fileUrl.path),
+           let modificationDate = attributes[.modificationDate] as? Date,
+           Date().timeIntervalSince(modificationDate) > maxCacheAge {
+            try? fileManager.removeItem(at: fileUrl)
+            return nil
+        }
+
+        return fileManager.contents(atPath: fileUrl.path)
     }
 
     private func saveToDisk(data: Data, url: String) async {
-        do {
-            try await CoreDataStack.shared.performBackgroundTask { context in
-                let request = NSFetchRequest<CachedImage>(entityName: "CachedImage")
-                request.predicate = NSPredicate(format: "url == %@", url)
-                request.fetchLimit = 1
-
-                let cached: CachedImage
-                if let existing = try context.fetch(request).first {
-                    cached = existing
-                } else {
-                    cached = CachedImage(context: context)
-                    cached.url = url
-                }
-
-                cached.data = data
-                cached.cachedAt = Date()
-
-                try context.save()
-            }
-        } catch {
-            // Silently fail for cache operations
-        }
+        let fileUrl = fileURL(for: url)
+        try? data.write(to: fileUrl)
     }
 
     func clearCache() async {
         memoryCache.removeAllObjects()
 
-        do {
-            try await CoreDataStack.shared.performBackgroundTask { context in
-                let request = NSFetchRequest<NSFetchRequestResult>(entityName: "CachedImage")
-                let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
-                try context.execute(deleteRequest)
+        if let files = try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil) {
+            for file in files {
+                try? fileManager.removeItem(at: file)
             }
-        } catch {
-            // Silently fail
         }
     }
 
     func clearExpiredCache() async {
         let cutoffDate = Date().addingTimeInterval(-maxCacheAge)
 
-        do {
-            try await CoreDataStack.shared.performBackgroundTask { context in
-                let request = NSFetchRequest<NSFetchRequestResult>(entityName: "CachedImage")
-                request.predicate = NSPredicate(format: "cachedAt < %@", cutoffDate as NSDate)
-                let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
-                try context.execute(deleteRequest)
+        guard let files = try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.contentModificationDateKey]) else {
+            return
+        }
+
+        for file in files {
+            if let attributes = try? file.resourceValues(forKeys: [.contentModificationDateKey]),
+               let modificationDate = attributes.contentModificationDate,
+               modificationDate < cutoffDate {
+                try? fileManager.removeItem(at: file)
             }
-        } catch {
-            // Silently fail
         }
     }
 
     func cacheSize() async -> Int64 {
-        do {
-            return try await CoreDataStack.shared.performBackgroundTask { context in
-                let request = NSFetchRequest<CachedImage>(entityName: "CachedImage")
-                let images = try context.fetch(request)
-                return images.reduce(0) { $0 + Int64($1.data?.count ?? 0) }
-            }
-        } catch {
+        guard let files = try? fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
             return 0
         }
+
+        var totalSize: Int64 = 0
+        for file in files {
+            if let attributes = try? file.resourceValues(forKeys: [.fileSizeKey]),
+               let fileSize = attributes.fileSize {
+                totalSize += Int64(fileSize)
+            }
+        }
+        return totalSize
     }
 }
 

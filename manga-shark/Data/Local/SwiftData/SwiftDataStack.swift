@@ -1,7 +1,6 @@
 import Foundation
 import SwiftData
 
-@available(iOS 17, *)
 actor SwiftDataStack {
     static let shared = SwiftDataStack()
 

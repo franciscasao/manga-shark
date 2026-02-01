@@ -1,12 +1,11 @@
 import Foundation
 import SwiftData
 
-// MARK: - iOS 17+ Implementation
+// MARK: - Reading Progress Manager
 
-@available(iOS 17, *)
 @MainActor
-final class ReadingProgressManageriOS17 {
-    static let shared = ReadingProgressManageriOS17()
+final class ReadingProgressManager {
+    static let shared = ReadingProgressManager()
 
     private var modelContainer: ModelContainer?
     private var pendingUpdates: [String: PendingUpdate] = [:]
@@ -40,7 +39,7 @@ final class ReadingProgressManageriOS17 {
 
     // MARK: - Progress Operations
 
-    func getProgress(for chapterId: String) async -> ChapterProgress? {
+    func getProgress(for chapterId: String) async -> ProgressData? {
         guard let container = modelContainer else { return nil }
 
         let context = ModelContext(container)
@@ -50,22 +49,29 @@ final class ReadingProgressManageriOS17 {
 
         do {
             let results = try context.fetch(descriptor)
-            return results.first
+            if let progress = results.first {
+                return ProgressData(
+                    lastPageIndex: progress.lastPageIndex,
+                    lastReadPercentage: progress.lastReadPercentage,
+                    isRead: progress.isRead
+                )
+            }
         } catch {
             print("⚠️ [ReadingProgressManager] Failed to fetch progress for chapter \(chapterId): \(error)")
-            return nil
         }
+        return nil
     }
 
-    func getReadStatus(for chapterIds: [String]) async -> [String: Bool] {
+    func getReadStatus(for chapterIds: [Int]) async -> [Int: Bool] {
         guard let container = modelContainer else { return [:] }
 
         let context = ModelContext(container)
-        var readStatus: [String: Bool] = [:]
+        var readStatus: [Int: Bool] = [:]
 
         for chapterId in chapterIds {
+            let chapterIdStr = String(chapterId)
             let descriptor = FetchDescriptor<ChapterProgress>(
-                predicate: #Predicate { $0.chapterId == chapterId }
+                predicate: #Predicate { $0.chapterId == chapterIdStr }
             )
 
             if let results = try? context.fetch(descriptor),
@@ -77,10 +83,9 @@ final class ReadingProgressManageriOS17 {
         return readStatus
     }
 
-    func markChapterCompleteImmediate(
-        chapterId: String,
-        seriesId: String
-    ) async {
+    /// Quick method to mark a chapter as 100% complete during chapter transitions
+    /// This method bypasses debounce to ensure immediate persistence
+    func markChapterComplete(chapterId: String, seriesId: String) async {
         guard let container = modelContainer else { return }
 
         let context = ModelContext(container)
@@ -115,7 +120,7 @@ final class ReadingProgressManageriOS17 {
         }
 
         // Server sync
-        await ReadingProgressManager.syncProgressToServer(
+        await Self.syncProgressToServer(
             chapterId: chapterId,
             lastPageRead: Int.max,
             isRead: true
@@ -192,151 +197,10 @@ final class ReadingProgressManageriOS17 {
                 }
 
                 // Phase 2: Server sync
-                await ReadingProgressManager.syncProgressToServer(
+                await Self.syncProgressToServer(
                     chapterId: chapterId,
                     lastPageRead: update.pageIndex,
                     isRead: update.isRead
-                )
-            }
-        }
-    }
-}
-
-// MARK: - Cross-Platform Wrapper
-
-@MainActor
-final class ReadingProgressManager {
-    static let shared = ReadingProgressManager()
-
-    private init() {}
-
-    // MARK: - Configuration
-
-    @available(iOS 17, *)
-    func configure(with container: ModelContainer) {
-        ReadingProgressManageriOS17.shared.configure(with: container)
-    }
-
-    // MARK: - Active Reading Guard
-
-    func beginReading(chapterId: String) {
-        if #available(iOS 17, *) {
-            ReadingProgressManageriOS17.shared.beginReading(chapterId: chapterId)
-        }
-        // On iOS 16, we don't need active reading guard since progress isn't synced via CloudKit
-    }
-
-    func endReading() {
-        if #available(iOS 17, *) {
-            ReadingProgressManageriOS17.shared.endReading()
-        }
-    }
-
-    /// Quick method to mark a chapter as 100% complete during chapter transitions
-    /// This method bypasses debounce to ensure immediate persistence
-    func markChapterComplete(chapterId: String, seriesId: String) async {
-        if #available(iOS 17, *) {
-            await ReadingProgressManageriOS17.shared.markChapterCompleteImmediate(
-                chapterId: chapterId,
-                seriesId: seriesId
-            )
-        } else {
-            // iOS 16: Use CoreData directly (already synchronous per-call)
-            let deviceId = DeviceIdentifierManager.shared.deviceId
-            if let chapterIdInt = Int(chapterId) {
-                try? await CoreDataStack.shared.updateChapterProgress(
-                    chapterId: chapterIdInt,
-                    deviceId: deviceId,
-                    lastPageRead: Int.max,
-                    isRead: true
-                )
-            }
-            await Self.syncProgressToServer(chapterId: chapterId, lastPageRead: Int.max, isRead: true)
-        }
-    }
-
-    /// Get read status for multiple chapters from the correct data source per iOS version
-    func getReadStatus(for chapterIds: [Int]) async -> [Int: Bool] {
-        if #available(iOS 17, *) {
-            let stringIds = chapterIds.map { String($0) }
-            let result = await ReadingProgressManageriOS17.shared.getReadStatus(for: stringIds)
-            // Convert back to Int keys
-            var intResult: [Int: Bool] = [:]
-            for (key, value) in result {
-                if let intKey = Int(key) {
-                    intResult[intKey] = value
-                }
-            }
-            return intResult
-        } else {
-            // iOS 16: Use CoreData
-            let deviceId = DeviceIdentifierManager.shared.deviceId
-            return (try? await CoreDataStack.shared.getChaptersReadStatus(
-                chapterIds: chapterIds,
-                deviceId: deviceId
-            )) ?? [:]
-        }
-    }
-
-    // MARK: - Progress Operations
-
-    func getProgress(for chapterId: String) async -> ProgressData? {
-        if #available(iOS 17, *) {
-            if let progress = await ReadingProgressManageriOS17.shared.getProgress(for: chapterId) {
-                return ProgressData(
-                    lastPageIndex: progress.lastPageIndex,
-                    lastReadPercentage: progress.lastReadPercentage,
-                    isRead: progress.isRead
-                )
-            }
-        } else {
-            // iOS 16 fallback: use CoreData
-            let deviceId = DeviceIdentifierManager.shared.deviceId
-            if let chapterId = Int(chapterId),
-               let progress = try? await CoreDataStack.shared.getChapterProgress(chapterId: chapterId, deviceId: deviceId) {
-                return ProgressData(
-                    lastPageIndex: progress.lastPageRead,
-                    lastReadPercentage: 0,  // Not tracked in iOS 16
-                    isRead: progress.isRead
-                )
-            }
-        }
-        return nil
-    }
-
-    func updateProgress(
-        chapterId: String,
-        seriesId: String,
-        percentage: Double,
-        pageIndex: Int,
-        isRead: Bool
-    ) {
-        if #available(iOS 17, *) {
-            ReadingProgressManageriOS17.shared.updateProgress(
-                chapterId: chapterId,
-                seriesId: seriesId,
-                percentage: percentage,
-                pageIndex: pageIndex,
-                isRead: isRead
-            )
-        } else {
-            // iOS 16 fallback: use CoreData
-            Task {
-                let deviceId = DeviceIdentifierManager.shared.deviceId
-                if let chapterIdInt = Int(chapterId) {
-                    try? await CoreDataStack.shared.updateChapterProgress(
-                        chapterId: chapterIdInt,
-                        deviceId: deviceId,
-                        lastPageRead: pageIndex,
-                        isRead: isRead
-                    )
-                }
-
-                // Also sync to server
-                await Self.syncProgressToServer(
-                    chapterId: chapterId,
-                    lastPageRead: pageIndex,
-                    isRead: isRead
                 )
             }
         }
