@@ -8,18 +8,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build the project
 xcodebuild -project manga-shark.xcodeproj -scheme manga-shark build
 
-# Build for simulator
-xcodebuild -project manga-shark.xcodeproj -scheme manga-shark -destination 'platform=iOS Simulator,name=iPhone 16'
+# Build for simulator (use available simulator name like "iPhone 17")
+xcodebuild -project manga-shark.xcodeproj -scheme manga-shark -destination 'platform=iOS Simulator,name=iPhone 17' build
 
 # Clean build
 xcodebuild -project manga-shark.xcodeproj -scheme manga-shark clean build
 ```
 
-No external dependencies - pure Xcode project with Swift/SwiftUI only. Requires Xcode 16.2+.
+**Dependencies**: Kingfisher (via SPM) for image loading/caching. Requires Xcode 16.2+.
 
 ## Architecture
 
-This is a SwiftUI manga reader app following **Clean Architecture with MVVM**:
+SwiftUI manga reader app following **Clean Architecture with MVVM**:
 
 ### Layer Structure
 - **Domain** (`Domain/`): Pure data models (Manga, Chapter, Page, Category, Source)
@@ -43,15 +43,26 @@ Uses Swift Actors throughout for thread safety:
 
 ### Key Patterns
 - **GraphQL**: All network operations in `GraphQLQueries.swift` (queries and mutations)
-- **Per-device progress**: Reading progress tracked locally per device (CoreData) and synced to server
-- **Two-phase saving**: Local CoreData save first, then async server sync
+- **Per-device progress**: Reading progress tracked locally per device and synced to server
+- **Two-phase saving**: Local save first, then async server sync
 - **AppState singleton**: Global state (server config, tab selection) via `@EnvironmentObject`
+
+### iOS 16/17 Compatibility
+- **iOS 17+**: SwiftData for persistence (`@Model`, `@Query`, `ModelContainer`)
+- **iOS 16**: UserDefaults/CoreData fallback with wrapper classes
+- Pattern: Views check `#available(iOS 17, *)` and delegate to version-specific implementations (e.g., `HistoryViewiOS17` vs `HistoryViewLegacy`)
+- SwiftData models in `Data/Local/SwiftData/` use `@available(iOS 17, *)` annotation
 
 ### Storage Strategy
 - **Keychain**: Server credentials (via KeychainHelper)
 - **UserDefaults**: Preferences (reader mode, reading direction, device ID)
-- **CoreData**: Device-specific chapter progress, cached manga/images
+- **SwiftData/CoreData**: Device-specific chapter progress, reading history
 - **In-memory**: Repository-level caching for manga, library, categories
+
+### Reader Architecture
+Two reader modes in `Presentation/Screens/Reader/`:
+- **Paged**: Standard page-by-page reading (`PagedReaderView`)
+- **Webtoon/Manhwa**: Infinite vertical scroll using UIKit (`ManhwaReaderViewController` wrapped in `ManhwaReaderRepresentable`)
 
 ## Key Files
 
@@ -59,5 +70,6 @@ Uses Swift Actors throughout for thread safety:
 - `Core/DI/AppState.swift` - Global state management
 - `Data/Network/GraphQL/GraphQLQueries.swift` - All GraphQL operations
 - `Data/Network/GraphQL/NetworkClient.swift` - HTTP client actor
-- `Data/Local/Database/CoreDataStack.swift` - Core Data setup (programmatic model)
+- `Data/Local/SwiftData/SwiftDataStack.swift` - SwiftData container setup (iOS 17+)
+- `Data/Local/Database/CoreDataStack.swift` - Core Data setup (iOS 16 fallback)
 - `Presentation/Screens/Reader/ReaderView.swift` - Main reading feature

@@ -17,6 +17,12 @@ struct MainTabView: View {
                 }
                 .tag(AppState.Tab.browse)
 
+            HistoryView()
+                .tabItem {
+                    Label(AppState.Tab.history.title, systemImage: AppState.Tab.history.icon)
+                }
+                .tag(AppState.Tab.history)
+
             DownloadsView()
                 .tabItem {
                     Label(AppState.Tab.downloads.title, systemImage: AppState.Tab.downloads.icon)

@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     enum Tab: Int, CaseIterable {
         case library
         case browse
+        case history
         case downloads
         case settings
 
@@ -18,6 +19,7 @@ final class AppState: ObservableObject {
             switch self {
             case .library: return "Library"
             case .browse: return "Browse"
+            case .history: return "History"
             case .downloads: return "Downloads"
             case .settings: return "Settings"
             }
@@ -27,6 +29,7 @@ final class AppState: ObservableObject {
             switch self {
             case .library: return "books.vertical"
             case .browse: return "globe"
+            case .history: return "clock.arrow.circlepath"
             case .downloads: return "arrow.down.circle"
             case .settings: return "gearshape"
             }

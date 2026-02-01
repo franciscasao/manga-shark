@@ -137,7 +137,12 @@ struct MangaDetailContent: View {
             }
         }
         .navigationDestination(for: Chapter.self) { chapter in
-            ReaderView(chapter: chapter, chapters: viewModel.chapters)
+            ReaderView(
+                chapter: chapter,
+                chapters: viewModel.chapters,
+                mangaTitle: viewModel.manga?.title ?? "Unknown",
+                mangaThumbnailUrl: viewModel.manga?.thumbnailUrl
+            )
         }
         .alert("Download", isPresented: $viewModel.showDownloadComingSoon) {
             Button("OK", role: .cancel) { }

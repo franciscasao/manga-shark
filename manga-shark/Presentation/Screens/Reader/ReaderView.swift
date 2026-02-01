@@ -4,15 +4,24 @@ import Combine
 struct ReaderView: View {
     let chapter: Chapter
     let chapters: [Chapter]
+    let mangaTitle: String
+    let mangaThumbnailUrl: String?
 
     @StateObject private var viewModel: ReaderViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showControls = true
 
-    init(chapter: Chapter, chapters: [Chapter]) {
+    init(chapter: Chapter, chapters: [Chapter], mangaTitle: String = "Unknown", mangaThumbnailUrl: String? = nil) {
         self.chapter = chapter
         self.chapters = chapters
-        _viewModel = StateObject(wrappedValue: ReaderViewModel(chapter: chapter, chapters: chapters))
+        self.mangaTitle = mangaTitle
+        self.mangaThumbnailUrl = mangaThumbnailUrl
+        _viewModel = StateObject(wrappedValue: ReaderViewModel(
+            chapter: chapter,
+            chapters: chapters,
+            mangaTitle: mangaTitle,
+            mangaThumbnailUrl: mangaThumbnailUrl
+        ))
     }
 
     var body: some View {
@@ -369,6 +378,8 @@ enum ReadingDirection: String, CaseIterable {
 final class ReaderViewModel: ObservableObject {
     let initialChapter: Chapter
     let chapters: [Chapter]
+    let mangaTitle: String
+    let mangaThumbnailUrl: String?
 
     @Published var currentChapter: Chapter
     @Published var pages: [Page] = []
@@ -394,10 +405,12 @@ final class ReaderViewModel: ObservableObject {
         return currentIndex > 0
     }
 
-    init(chapter: Chapter, chapters: [Chapter]) {
+    init(chapter: Chapter, chapters: [Chapter], mangaTitle: String = "Unknown", mangaThumbnailUrl: String? = nil) {
         self.initialChapter = chapter
         self.currentChapter = chapter
         self.chapters = chapters
+        self.mangaTitle = mangaTitle
+        self.mangaThumbnailUrl = mangaThumbnailUrl
 
         if let savedMode = UserDefaults.standard.string(forKey: UserDefaultsKeys.readerMode),
            let mode = ReaderMode(rawValue: savedMode) {
@@ -468,6 +481,18 @@ final class ReaderViewModel: ObservableObject {
             await ReadingProgressManager.shared.markChapterComplete(
                 chapterId: String(oldChapter.id),
                 seriesId: String(oldChapter.mangaId)
+            )
+
+            // Record completed chapter in history
+            await HistoryManager.shared.recordReading(
+                mangaId: String(oldChapter.mangaId),
+                chapterId: String(oldChapter.id),
+                seriesName: mangaTitle,
+                chapterName: oldChapter.name,
+                chapterNumber: oldChapter.chapterNumber,
+                thumbnailUrl: mangaThumbnailUrl,
+                progressPercentage: 1.0,
+                lastPageIndex: Int.max
             )
         }
 
@@ -546,6 +571,18 @@ final class ReaderViewModel: ObservableObject {
             percentage: percentage,
             pageIndex: currentPageIndex,
             isRead: isRead
+        )
+
+        // Record reading history
+        await HistoryManager.shared.recordReading(
+            mangaId: String(currentChapter.mangaId),
+            chapterId: String(currentChapter.id),
+            seriesName: mangaTitle,
+            chapterName: currentChapter.name,
+            chapterNumber: currentChapter.chapterNumber,
+            thumbnailUrl: mangaThumbnailUrl,
+            progressPercentage: percentage,
+            lastPageIndex: currentPageIndex
         )
 
         // End reading session

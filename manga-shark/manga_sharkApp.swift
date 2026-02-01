@@ -22,7 +22,7 @@ struct manga_sharkApp: App {
     @available(iOS 17, *)
     private static func configureSwiftData() {
         do {
-            let schema = Schema([ChapterProgress.self, MangaScanlatorFilter.self])
+            let schema = Schema([ChapterProgress.self, MangaScanlatorFilter.self, ReadingHistory.self])
             let configuration = ModelConfiguration(
                 schema: schema,
                 cloudKitDatabase: .automatic
@@ -36,6 +36,7 @@ struct manga_sharkApp: App {
             Task { @MainActor in
                 ReadingProgressManageriOS17.shared.configure(with: container)
                 ScanlatorFilterManageriOS17.shared.configure(with: container)
+                HistoryManageriOS17.shared.configure(with: container)
             }
         } catch {
             print("Failed to create ModelContainer: \(error)")
