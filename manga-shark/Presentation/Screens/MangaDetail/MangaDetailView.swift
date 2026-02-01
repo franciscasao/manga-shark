@@ -814,8 +814,24 @@ final class MangaDetailViewModel: ObservableObject {
     }
 }
 
-#Preview {
+#Preview("Manga Detail") {
     NavigationStack {
         MangaDetailView(mangaId: 1)
     }
+}
+
+#Preview("Status Badge - Ongoing") {
+    StatusBadge(status: .ongoing)
+}
+
+#Preview("Status Badge - Completed") {
+    StatusBadge(status: .completed)
+}
+
+#Preview("Chapter Row - Unread") {
+    ChapterRowView(chapter: .preview(), isRead: false)
+}
+
+#Preview("Chapter Row - Read") {
+    ChapterRowView(chapter: .preview(), isRead: true)
 }

@@ -233,6 +233,42 @@ struct HistoryRowView: View {
     }
 }
 
-#Preview {
+#Preview("History View") {
     HistoryView()
+}
+
+#Preview("History Row - In Progress") {
+    HistoryRowView(
+        seriesName: "One Piece",
+        chapterName: "Romance Dawn",
+        chapterNumber: 1.0,
+        thumbnailUrl: nil,
+        lastReadDate: Date(),
+        progressPercentage: 0.75
+    )
+    .padding()
+}
+
+#Preview("History Row - Completed") {
+    HistoryRowView(
+        seriesName: "Naruto",
+        chapterName: "Uzumaki Naruto",
+        chapterNumber: 1.0,
+        thumbnailUrl: nil,
+        lastReadDate: Date().addingTimeInterval(-3600),
+        progressPercentage: 1.0
+    )
+    .padding()
+}
+
+#Preview("With Sample Data") {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: ReadingHistory.self, configurations: config)
+
+    for entry in ReadingHistory.previewList {
+        container.mainContext.insert(entry)
+    }
+
+    return HistoryView()
+        .modelContainer(container)
 }

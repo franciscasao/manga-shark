@@ -2,8 +2,12 @@ import SwiftUI
 import Combine
 
 struct LibraryView: View {
-    @StateObject private var viewModel = LibraryViewModel()
+    @StateObject private var viewModel: LibraryViewModel
     @State private var searchText = ""
+
+    init(viewModel: LibraryViewModel = LibraryViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     private let columns = [
         GridItem(.adaptive(minimum: 120, maximum: 180), spacing: 12)
@@ -106,6 +110,20 @@ final class LibraryViewModel: ObservableObject {
     }
     @Published var sortAscending: Bool = true {
         didSet { sortLibrary() }
+    }
+
+    /// Initializer that allows optional mock data for previews
+    nonisolated init(mockLibrary: [Manga]? = nil) {
+        // Note: Property initialization happens on MainActor after init
+        // We store the mock data to apply it later if needed
+        if let mockLibrary = mockLibrary {
+            // For mock data, we use MainActor.assumeIsolated to set properties
+            // This is safe because SwiftUI will call this on the main thread
+            MainActor.assumeIsolated {
+                self.library = mockLibrary
+                self.isLoading = false
+            }
+        }
     }
 
     enum SortOrder: String, CaseIterable {
@@ -248,6 +266,12 @@ final class LibraryViewModel: ObservableObject {
     }
 }
 
-#Preview {
-    LibraryView()
+#Preview("Library Grid") {
+    let viewModel = LibraryViewModel(mockLibrary: Manga.previewList)
+    return LibraryView(viewModel: viewModel)
+}
+
+#Preview("Empty Library") {
+    let viewModel = LibraryViewModel(mockLibrary: [])
+    return LibraryView(viewModel: viewModel)
 }

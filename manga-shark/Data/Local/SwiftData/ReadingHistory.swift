@@ -43,3 +43,52 @@ final class ReadingHistory: Hashable {
         hasher.combine(mangaId)
     }
 }
+
+// MARK: - Preview Helpers
+
+extension ReadingHistory {
+    static var preview: ReadingHistory {
+        ReadingHistory(
+            mangaId: "1",
+            chapterId: "100",
+            seriesName: "One Piece",
+            chapterName: "Romance Dawn",
+            chapterNumber: 1.0,
+            thumbnailUrl: nil,
+            lastReadDate: Date(),
+            progressPercentage: 0.75,
+            lastPageIndex: 15
+        )
+    }
+
+    static var previewList: [ReadingHistory] {
+        [
+            ReadingHistory(
+                mangaId: "1",
+                chapterId: "100",
+                seriesName: "One Piece",
+                chapterName: "Romance Dawn",
+                chapterNumber: 1.0,
+                progressPercentage: 0.75
+            ),
+            ReadingHistory(
+                mangaId: "2",
+                chapterId: "200",
+                seriesName: "Naruto",
+                chapterName: "Uzumaki Naruto",
+                chapterNumber: 1.0,
+                lastReadDate: Date().addingTimeInterval(-3600),
+                progressPercentage: 1.0
+            ),
+            ReadingHistory(
+                mangaId: "3",
+                chapterId: "300",
+                seriesName: "Bleach",
+                chapterName: "Death and Strawberry",
+                chapterNumber: 1.0,
+                lastReadDate: Date().addingTimeInterval(-86400),
+                progressPercentage: 0.5
+            ),
+        ]
+    }
+}

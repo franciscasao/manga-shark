@@ -131,14 +131,26 @@ struct SearchEmptyView: View {
     }
 }
 
-#Preview {
-    MangaGridItem(manga: Manga(
-        id: 1,
-        sourceId: "test",
-        url: "/manga/1",
-        title: "One Piece",
-        thumbnailUrl: nil,
-        unreadCount: 42
-    ))
-    .frame(width: 150)
+#Preview("Single Item") {
+    MangaGridItem(manga: .preview)
+        .frame(width: 150)
+}
+
+#Preview("Grid") {
+    let columns = [
+        GridItem(.adaptive(minimum: 120), spacing: 16)
+    ]
+
+    ScrollView {
+        LazyVGrid(columns: columns, spacing: 16) {
+            ForEach(Manga.previewList) { manga in
+                MangaGridItem(manga: manga)
+            }
+        }
+        .padding()
+    }
+}
+
+#Preview("Empty State") {
+    SearchEmptyView(searchText: "Dragon Ball")
 }

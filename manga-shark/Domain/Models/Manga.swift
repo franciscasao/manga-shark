@@ -108,3 +108,34 @@ enum UpdateStrategy: String {
     case alwaysUpdate = "ALWAYS_UPDATE"
     case onlyFetchOnce = "ONLY_FETCH_ONCE"
 }
+
+// MARK: - Preview Helpers
+
+extension Manga {
+    static var preview: Manga {
+        Manga(
+            id: 1,
+            sourceId: "preview",
+            url: "/manga/preview",
+            title: "One Piece",
+            thumbnailUrl: nil,
+            author: "Eiichiro Oda",
+            description: "Monkey D. Luffy sets off on an adventure to find the legendary treasure, One Piece.",
+            genre: ["Action", "Adventure", "Comedy"],
+            status: .ongoing,
+            inLibrary: true,
+            unreadCount: 42,
+            chapterCount: 1100
+        )
+    }
+
+    static var previewList: [Manga] {
+        [
+            Manga(id: 1, sourceId: "s1", url: "/1", title: "One Piece", thumbnailUrl: nil, unreadCount: 42),
+            Manga(id: 2, sourceId: "s1", url: "/2", title: "Naruto", thumbnailUrl: nil, status: .completed),
+            Manga(id: 3, sourceId: "s1", url: "/3", title: "Bleach", thumbnailUrl: nil, unreadCount: 10),
+            Manga(id: 4, sourceId: "s1", url: "/4", title: "My Hero Academia", thumbnailUrl: nil, status: .ongoing),
+            Manga(id: 5, sourceId: "s1", url: "/5", title: "Demon Slayer", thumbnailUrl: nil, status: .completed),
+        ]
+    }
+}

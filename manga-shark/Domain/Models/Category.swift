@@ -42,3 +42,25 @@ extension Category {
         isDefault: true
     )
 }
+
+// MARK: - Preview Helpers
+
+extension Category {
+    static var preview: Category {
+        Category(
+            id: 1,
+            name: "Reading",
+            order: 1,
+            mangaCount: 15
+        )
+    }
+
+    static var previewList: [Category] {
+        [
+            Category(id: 0, name: "Default", order: 0, isDefault: true, mangaCount: 25),
+            Category(id: 1, name: "Reading", order: 1, mangaCount: 15),
+            Category(id: 2, name: "Completed", order: 2, mangaCount: 50),
+            Category(id: 3, name: "Plan to Read", order: 3, mangaCount: 30),
+        ]
+    }
+}
