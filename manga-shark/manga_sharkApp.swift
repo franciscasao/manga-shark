@@ -16,7 +16,7 @@ struct manga_sharkApp: App {
 
     init() {
         do {
-            let schema = Schema([ChapterProgress.self, MangaScanlatorFilter.self, ReadingHistory.self])
+            let schema = Schema([ChapterProgress.self, MangaScanlatorFilter.self, ReadingHistory.self, LocalManga.self, LocalChapter.self])
             let configuration = ModelConfiguration(
                 schema: schema,
                 cloudKitDatabase: .automatic
@@ -29,6 +29,7 @@ struct manga_sharkApp: App {
                 ReadingProgressManager.shared.configure(with: container)
                 ScanlatorFilterManager.shared.configure(with: container)
                 HistoryManager.shared.configure(with: container)
+                LocalLibraryRepository.shared.configure(with: container)
             }
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
@@ -42,6 +43,10 @@ struct manga_sharkApp: App {
                 .modelContainer(modelContainer)
                 .task {
                     await ProgressMigrationManager.shared.migrateIfNeeded(to: modelContainer)
+                    // Run library migration after server is configured
+                    if appState.isServerConfigured {
+                        await LibraryMigrationManager.shared.migrateIfNeeded()
+                    }
                 }
         }
     }

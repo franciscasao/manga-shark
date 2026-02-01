@@ -65,12 +65,13 @@ struct MangaDetailContent: View {
                             Task { await viewModel.toggleLibrary() }
                         }) {
                             Label(
-                                manga.inLibrary ? "Remove from Library" : "Add to Library",
-                                systemImage: manga.inLibrary ? "bookmark.slash" : "bookmark"
+                                viewModel.isInLocalLibrary ? "Remove from Library" : "Add to Library",
+                                systemImage: viewModel.isInLocalLibrary ? "bookmark.slash" : "bookmark"
                             )
                         }
+                        .disabled(viewModel.isSavingToLibrary)
 
-                        if manga.inLibrary {
+                        if viewModel.isInLocalLibrary {
                             Button(action: { showingCategorySheet = true }) {
                                 Label("Edit Categories", systemImage: "folder")
                             }
@@ -183,18 +184,24 @@ struct MangaDetailContent: View {
                 Task { await viewModel.toggleLibrary() }
             }) {
                 VStack(spacing: 4) {
-                    Image(systemName: manga.inLibrary ? "bookmark.fill" : "bookmark")
-                        .font(.title2)
-                    Text(manga.inLibrary ? "In Library" : "Add to Library")
+                    if viewModel.isSavingToLibrary {
+                        ProgressView()
+                            .frame(height: 28)
+                    } else {
+                        Image(systemName: viewModel.isInLocalLibrary ? "bookmark.fill" : "bookmark")
+                            .font(.title2)
+                    }
+                    Text(viewModel.isInLocalLibrary ? "In Library" : "Add to Library")
                         .font(.caption)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(manga.inLibrary ? Color.blue.opacity(0.15) : Color.secondary.opacity(0.1))
+                .background(viewModel.isInLocalLibrary ? Color.blue.opacity(0.15) : Color.secondary.opacity(0.1))
                 .cornerRadius(8)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(manga.inLibrary ? .blue : .primary)
+            .foregroundStyle(viewModel.isInLocalLibrary ? .blue : .primary)
+            .disabled(viewModel.isSavingToLibrary)
 
             if let firstUnread = viewModel.firstUnreadChapter {
                 NavigationLink(value: firstUnread) {
@@ -580,6 +587,8 @@ final class MangaDetailViewModel: ObservableObject {
     @Published var showDownloadComingSoon = false
     @Published var showScanlatorFilter = false
     @Published var selectedScanlators: Set<String> = []  // Empty = show all
+    @Published var isInLocalLibrary: Bool = false
+    @Published var isSavingToLibrary: Bool = false
 
     var uniqueScanlators: [String] {
         let scanlators = chapters.compactMap { $0.scanlator }.filter { !$0.isEmpty }
@@ -672,6 +681,9 @@ final class MangaDetailViewModel: ObservableObject {
             chapters = try await MangaRepository.shared.getChapters(mangaId: mangaId)
             sortChapters()
 
+            // Check if manga is in local library
+            isInLocalLibrary = await MangaRepository.shared.isInLocalLibrary(mangaId: mangaId)
+
             // Load saved scanlator filter
             await loadSavedFilter()
 
@@ -724,14 +736,21 @@ final class MangaDetailViewModel: ObservableObject {
     }
 
     func toggleLibrary() async {
-        guard let manga = manga else { return }
+        guard manga != nil else { return }
+
+        isSavingToLibrary = true
+        defer { isSavingToLibrary = false }
 
         do {
-            self.manga = try await MangaRepository.shared.updateLibraryStatus(
-                mangaId: manga.id,
-                inLibrary: !manga.inLibrary
-            )
-            await LibraryRepository.shared.invalidateLibrary()
+            if isInLocalLibrary {
+                // Remove from local library
+                try await MangaRepository.shared.removeFromLibrary(mangaId: mangaId)
+                isInLocalLibrary = false
+            } else {
+                // Add to local library (fetches manga + chapters from server and saves locally)
+                try await MangaRepository.shared.saveToLibrary(mangaId: mangaId)
+                isInLocalLibrary = true
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

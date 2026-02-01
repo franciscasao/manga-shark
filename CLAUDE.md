@@ -17,6 +17,8 @@ xcodebuild -project manga-shark.xcodeproj -scheme manga-shark clean build
 
 **Dependencies**: Kingfisher (via SPM) for image loading/caching. Requires Xcode 16.2+.
 
+**Note**: No test target exists in this project.
+
 ## Architecture
 
 SwiftUI manga reader app following **Clean Architecture with MVVM**:
@@ -46,6 +48,7 @@ Uses Swift Actors throughout for thread safety:
 - **Per-device progress**: Reading progress tracked locally per device and synced to server
 - **Two-phase saving**: Local save first, then async server sync
 - **AppState singleton**: Global state (server config, tab selection) via `@EnvironmentObject`
+- **Preview mocking**: ViewModels accept optional mock data via init to bypass network calls in Xcode Previews (previews run in sandbox without server config)
 
 ### iOS 16/17 Compatibility
 - **iOS 17+**: SwiftData for persistence (`@Model`, `@Query`, `ModelContainer`)
@@ -72,4 +75,6 @@ Two reader modes in `Presentation/Screens/Reader/`:
 - `Data/Network/GraphQL/NetworkClient.swift` - HTTP client actor
 - `Data/Local/SwiftData/SwiftDataStack.swift` - SwiftData container setup (iOS 17+)
 - `Data/Local/Database/CoreDataStack.swift` - Core Data setup (iOS 16 fallback)
+- `Data/Local/SwiftData/ReadingProgressManager.swift` - Unified reading progress across iOS versions
 - `Presentation/Screens/Reader/ReaderView.swift` - Main reading feature
+- `Domain/Models/Manga.swift` - Includes `Manga.preview` and `Manga.previewList` for SwiftUI previews

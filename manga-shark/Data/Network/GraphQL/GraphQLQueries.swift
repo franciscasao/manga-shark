@@ -22,7 +22,7 @@ enum GraphQLQueries {
     """
 
     static let getSourceManga = """
-    query GetSourceManga($sourceId: LongString!, $type: FetchSourceMangaType!, $page: Int!) {
+    mutation FetchSourceManga($sourceId: LongString!, $type: FetchSourceMangaType!, $page: Int!) {
         fetchSourceManga(input: { source: $sourceId, type: $type, page: $page }) {
             hasNextPage
             mangas {
@@ -43,7 +43,7 @@ enum GraphQLQueries {
     """
 
     static let searchSource = """
-    query SearchSource($sourceId: LongString!, $query: String!, $page: Int!) {
+    mutation SearchSourceManga($sourceId: LongString!, $query: String!, $page: Int!) {
         fetchSourceManga(input: { source: $sourceId, type: SEARCH, page: $page, query: $query }) {
             hasNextPage
             mangas {
@@ -352,7 +352,7 @@ enum GraphQLQueries {
     // MARK: - Global Search
 
     static let globalSearch = """
-    query GlobalSearch($query: String!) {
+    mutation GlobalSearchManga($query: String!) {
         fetchSourceManga(input: { source: "all", type: SEARCH, query: $query, page: 1 }) {
             mangas {
                 id
