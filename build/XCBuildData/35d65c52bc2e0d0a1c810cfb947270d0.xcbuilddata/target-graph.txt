@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'manga-shark' in project 'manga-shark' (no dependencies)
