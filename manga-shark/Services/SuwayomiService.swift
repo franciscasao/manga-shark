@@ -70,6 +70,55 @@ actor SuwayomiService {
         )
     }
 
+    // MARK: - Library
+
+    /// Fetches the user's library categories.
+    ///
+    /// Maps to `GET /api/v1/category`.
+    func fetchCategories() async throws -> [LibraryCategory] {
+        try await request(path: "/category")
+    }
+
+    /// Fetches the manga in a single category.
+    ///
+    /// Maps to `GET /api/v1/category/{categoryId}`.
+    func fetchMangaInCategory(categoryId: Int) async throws -> [Manga] {
+        try await request(path: "/category/\(categoryId)")
+    }
+
+    /// Fetches the user's entire library.
+    ///
+    /// Suwayomi has no single "whole library" endpoint — the library is
+    /// split across categories, and a manga can belong to more than one.
+    /// This fetches every category concurrently and merges the results,
+    /// de-duplicated by `Manga.id` and preserving first-seen order.
+    func fetchLibrary() async throws -> [Manga] {
+        let categories = try await fetchCategories()
+
+        let mangaByCategory = try await withThrowingTaskGroup(of: (Int, [Manga]).self) { group in
+            for category in categories {
+                group.addTask {
+                    (category.order, try await self.fetchMangaInCategory(categoryId: category.id))
+                }
+            }
+
+            var results: [(Int, [Manga])] = []
+            for try await result in group {
+                results.append(result)
+            }
+            return results
+        }
+
+        var seen = Set<Int>()
+        var library: [Manga] = []
+        for (_, manga) in mangaByCategory.sorted(by: { $0.0 < $1.0 }) {
+            for item in manga where seen.insert(item.id).inserted {
+                library.append(item)
+            }
+        }
+        return library
+    }
+
     // MARK: - Manga details
 
     /// Fetches full details for a single manga.

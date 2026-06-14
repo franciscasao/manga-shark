@@ -22,7 +22,7 @@ import Foundation
 enum AppConfig {
     /// Base URL for Suwayomi's REST API, e.g. `http://suwayomi.local:4567`.
     static var suwayomiBaseURL: URL {
-        URL(string: "http://suwayomi.local:4567")!
+        URL(string: "http://franciss-mac-mini.wampus-boa.ts.net:4567")!
     }
 
     /// Base URL for the Nginx server hosting raw `.cbz` chapter archives,
@@ -33,4 +33,16 @@ enum AppConfig {
 
     /// Suwayomi REST API version path prefix.
     static let apiVersionPath = "/api/v1"
+
+    /// Resolves a server-relative path returned by Suwayomi (e.g.
+    /// `/api/v1/manga/677/thumbnail`) into an absolute URL against
+    /// `suwayomiBaseURL`.
+    ///
+    /// Unlike `apiVersionPath`-based requests in `SuwayomiService`, these
+    /// paths already include `/api/v1`, so this resolves against the host
+    /// root rather than appending `apiVersionPath` again.
+    static func absoluteURL(for serverPath: String) -> URL? {
+        guard !serverPath.isEmpty else { return nil }
+        return URL(string: serverPath, relativeTo: suwayomiBaseURL)?.absoluteURL
+    }
 }
