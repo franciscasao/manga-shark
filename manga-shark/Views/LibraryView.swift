@@ -20,6 +20,9 @@ struct LibraryView: View {
                 .task {
                     await viewModel.load()
                 }
+                .navigationDestination(for: Manga.self) { manga in
+                    ChapterListView(manga: manga)
+                }
         }
     }
 
@@ -52,7 +55,10 @@ struct LibraryView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(manga) { item in
-                            MangaCoverCard(manga: item)
+                            NavigationLink(value: item) {
+                                MangaCoverCard(manga: item)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(16)

@@ -59,23 +59,47 @@ actor DownloadManager {
     /// Downloads the `.cbz` archive for `chapter` into the local cache
     /// directory, returning the path to the downloaded archive.
     ///
-    /// TODO: Implement with `URLSession.download(from:)`, reporting
-    /// progress via an `AsyncSequence` or delegate so the reader UI can
-    /// show a progress indicator for large archives.
-    func downloadArchive(for chapter: Chapter) async throws -> URL {
-        let remoteURL = try cbzURL(for: chapter)
+    /// Streams the response body via `URLSession.bytes(from:)` and reports
+    /// progress as a `0...1` fraction through `onProgress`, computed from the
+    /// response's `Content-Length` when available. If the server doesn't
+    /// report a length, `onProgress` is not called and callers should fall
+    /// back to an indeterminate indicator.
+    ///
+    /// If `destination` already exists on disk, the download is skipped
+    /// entirely and the cached archive's path is returned immediately.
+    func downloadArchive(
+        for chapter: Chapter,
+        onProgress: @Sendable (Double) -> Void = { _ in }
+    ) async throws -> URL {
         let destination = archiveURL(for: chapter)
 
-        // TODO: stream the download instead of loading the whole archive
-        // into memory, and skip the request entirely if `destination`
-        // already exists on disk.
-        let (data, response) = try await session.data(from: remoteURL)
+        if fileManager.fileExists(atPath: destination.path) {
+            return destination
+        }
+
+        let remoteURL = try cbzURL(for: chapter)
+        let (bytes, response) = try await session.bytes(from: remoteURL)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw DownloadError.invalidResponse
         }
         guard (200...299).contains(httpResponse.statusCode) else {
             throw DownloadError.httpError(statusCode: httpResponse.statusCode)
+        }
+
+        let expectedLength = httpResponse.expectedContentLength
+        var data = Data()
+        if expectedLength > 0 {
+            data.reserveCapacity(Int(expectedLength))
+        }
+
+        var received: Int64 = 0
+        for try await byte in bytes {
+            data.append(byte)
+            received += 1
+            if expectedLength > 0 {
+                onProgress(Double(received) / Double(expectedLength))
+            }
         }
 
         try fileManager.createDirectory(
@@ -127,6 +151,34 @@ actor DownloadManager {
     func fetchPages(for chapter: Chapter) async throws -> [URL] {
         let archive = try await downloadArchive(for: chapter)
         return try extractPages(from: archive, for: chapter)
+    }
+
+    /// Downloads and extracts `chapter`, returning a `LocalChapterData`
+    /// describing the on-disk archive and extracted pages so the reader can
+    /// display them and later clean them up via `cleanup(_:)`.
+    func prepareChapter(
+        for chapter: Chapter,
+        onProgress: @Sendable (Double) -> Void = { _ in }
+    ) async throws -> LocalChapterData {
+        let archive = try await downloadArchive(for: chapter, onProgress: onProgress)
+        let pages = try extractPages(from: archive, for: chapter)
+        return LocalChapterData(
+            chapter: chapter,
+            pageURLs: pages,
+            archiveURL: archive,
+            extractionDirectory: extractionDirectory(for: chapter)
+        )
+    }
+
+    // MARK: - Cleanup
+
+    /// Removes the extracted pages and downloaded `.cbz` archive for a
+    /// previously-prepared chapter, freeing the disk space they used.
+    ///
+    /// Safe to call even if the files have already been removed.
+    func cleanup(_ data: LocalChapterData) {
+        try? fileManager.removeItem(at: data.extractionDirectory)
+        try? fileManager.removeItem(at: data.archiveURL)
     }
 
     // MARK: - Cache management
